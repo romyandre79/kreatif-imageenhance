@@ -436,7 +436,7 @@ namespace Fotocopy
 
         private void SetupNumericControlSync()
         {
-            NumericUpDown[] controls = new NumericUpDown[] { numMarginTop, numMarginBottom, numMarginLeft, numMarginRight, numScale, numCopies };
+            NumericUpDown[] controls = new NumericUpDown[] { numMarginTop, numMarginBottom, numMarginLeft, numMarginRight, numScale, numCopies, numZoom };
             foreach (var num in controls)
             {
                 num.InterceptArrowKeys = true;
@@ -455,6 +455,19 @@ namespace Fotocopy
                     CommitNumericInput(s as NumericUpDown);
                 };
             }
+
+            // Mouse wheel zoom pada preview gambar
+            picPreview.MouseWheel += (s, e) =>
+            {
+                if (e.Delta > 0)
+                {
+                    btnZoomIn.PerformClick();
+                }
+                else if (e.Delta < 0)
+                {
+                    btnZoomOut.PerformClick();
+                }
+            };
         }
 
         private void CommitNumericInput(NumericUpDown num)
@@ -608,6 +621,25 @@ namespace Fotocopy
                     }
                 }
 
+                int zoomPercent = (int)numZoom.Value;
+                if (zoomPercent != 100)
+                {
+                    float zoomFactor = zoomPercent / 100f;
+                    int zoomedW = Math.Max(50, (int)Math.Round(pageCanvas.Width * zoomFactor));
+                    int zoomedH = Math.Max(50, (int)Math.Round(pageCanvas.Height * zoomFactor));
+
+                    Bitmap zoomedCanvas = new Bitmap(zoomedW, zoomedH);
+                    using (Graphics gz = Graphics.FromImage(zoomedCanvas))
+                    {
+                        gz.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        gz.SmoothingMode = SmoothingMode.HighQuality;
+                        gz.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                        gz.DrawImage(pageCanvas, 0, 0, zoomedW, zoomedH);
+                    }
+                    pageCanvas.Dispose();
+                    pageCanvas = zoomedCanvas;
+                }
+
                 _renderedPreviewImage?.Dispose();
                 _renderedPreviewImage = pageCanvas;
                 picPreview.Image = _renderedPreviewImage;
@@ -618,6 +650,29 @@ namespace Fotocopy
             {
                 System.Diagnostics.Debug.WriteLine($"UpdatePreviewDisplay error: {ex.Message}");
             }
+        }
+
+        private void btnZoomIn_Click(object sender, EventArgs e)
+        {
+            decimal next = numZoom.Value + 10;
+            if (next <= numZoom.Maximum)
+            {
+                numZoom.Value = next;
+            }
+        }
+
+        private void btnZoomOut_Click(object sender, EventArgs e)
+        {
+            decimal next = numZoom.Value - 10;
+            if (next >= numZoom.Minimum)
+            {
+                numZoom.Value = next;
+            }
+        }
+
+        private void numZoom_ValueChanged(object sender, EventArgs e)
+        {
+            UpdatePreviewDisplay();
         }
 
         // ==========================================

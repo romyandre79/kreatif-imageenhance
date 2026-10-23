@@ -64,6 +64,10 @@ namespace Fotocopy
             this.btnResetCrop = new System.Windows.Forms.Button();
             this.btnUndo = new System.Windows.Forms.Button();
             this.btnRedo = new System.Windows.Forms.Button();
+            this.btnZoomOut = new System.Windows.Forms.Button();
+            this.btnZoomIn = new System.Windows.Forms.Button();
+            this.numZoom = new System.Windows.Forms.NumericUpDown();
+            this.lblZoom = new System.Windows.Forms.Label();
             this.picPreview = new System.Windows.Forms.PictureBox();
             this.btnUploadImage = new System.Windows.Forms.Button();
             this.btnChangeBg = new System.Windows.Forms.Button();
@@ -85,6 +89,7 @@ namespace Fotocopy
             ((System.ComponentModel.ISupportInitialize)(this.numScale)).BeginInit();
             this.gbPreview.SuspendLayout();
             this.pnlCropToolbar.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numZoom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -536,6 +541,53 @@ namespace Fotocopy
             this.btnRedo.UseVisualStyleBackColor = false;
             this.btnRedo.Click += new System.EventHandler(this.btnRedo_Click);
             // 
+            // btnZoomOut
+            // 
+            this.btnZoomOut.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(241)))), ((int)(((byte)(245)))), ((int)(((byte)(249)))));
+            this.btnZoomOut.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnZoomOut.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnZoomOut.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(41)))), ((int)(((byte)(59)))));
+            this.btnZoomOut.Location = new System.Drawing.Point(452, 3);
+            this.btnZoomOut.Name = "btnZoomOut";
+            this.btnZoomOut.Size = new System.Drawing.Size(32, 32);
+            this.btnZoomOut.TabIndex = 4;
+            this.btnZoomOut.Text = "➖";
+            this.btnZoomOut.UseVisualStyleBackColor = false;
+            this.btnZoomOut.Click += new System.EventHandler(this.btnZoomOut_Click);
+            // 
+            // numZoom
+            // 
+            this.numZoom.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.numZoom.Location = new System.Drawing.Point(488, 5);
+            this.numZoom.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
+            this.numZoom.Minimum = new decimal(new int[] { 25, 0, 0, 0 });
+            this.numZoom.Name = "numZoom";
+            this.numZoom.Size = new System.Drawing.Size(60, 27);
+            this.numZoom.TabIndex = 5;
+            this.numZoom.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.numZoom.Value = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numZoom.ValueChanged += new System.EventHandler(this.numZoom_ValueChanged);
+            // 
+            // btnZoomIn
+            // 
+            this.btnZoomIn.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(241)))), ((int)(((byte)(245)))), ((int)(((byte)(249)))));
+            this.btnZoomIn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnZoomIn.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnZoomIn.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(41)))), ((int)(((byte)(59)))));
+            this.btnZoomIn.Location = new System.Drawing.Point(552, 3);
+            this.btnZoomIn.Name = "btnZoomIn";
+            this.btnZoomIn.Size = new System.Drawing.Size(32, 32);
+            this.btnZoomIn.TabIndex = 6;
+            this.btnZoomIn.Text = "➕";
+            this.btnZoomIn.UseVisualStyleBackColor = false;
+            this.btnZoomIn.Click += new System.EventHandler(this.btnZoomIn_Click);
+            // 
+            // pnlCropToolbar setup addition
+            // 
+            this.pnlCropToolbar.Controls.Add(this.btnZoomIn);
+            this.pnlCropToolbar.Controls.Add(this.numZoom);
+            this.pnlCropToolbar.Controls.Add(this.btnZoomOut);
+            // 
             // picPreview
             // 
             this.picPreview.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(248)))), ((int)(((byte)(250)))), ((int)(((byte)(252)))));
@@ -748,6 +800,10 @@ namespace Fotocopy
         private System.Windows.Forms.Button btnResetCrop;
         private System.Windows.Forms.Button btnUndo;
         private System.Windows.Forms.Button btnRedo;
+        private System.Windows.Forms.Button btnZoomOut;
+        private System.Windows.Forms.NumericUpDown numZoom;
+        private System.Windows.Forms.Button btnZoomIn;
+        private System.Windows.Forms.Label lblZoom;
         private System.Windows.Forms.PictureBox picPreview;
         private System.Windows.Forms.Button btnUploadImage;
         private System.Windows.Forms.Button btnScanPreview;

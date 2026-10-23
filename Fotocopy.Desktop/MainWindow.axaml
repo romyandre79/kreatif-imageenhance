@@ -138,23 +138,39 @@
 
             <!-- Preview Viewport dengan Crop Toolbar -->
             <Grid Grid.Column="1" RowDefinitions="Auto, *">
-                <!-- Crop & Undo Toolbar -->
+                <!-- Crop, Undo & Zoom Toolbar -->
                 <Border Grid.Row="0" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="0,0,0,1" Padding="12,8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="btnCropSelection" Content="✂️ Potong Area (Crop)" Background="#DCFCE7" Foreground="#166534" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnCropSelection_Click" />
-                        <Button x:Name="btnResetCrop" Content="↺ Reset Asli" Background="#F8FAFC" Foreground="#475569" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnResetCrop_Click" />
-                        <Button x:Name="btnUndo" Content="↶ Undo" Background="#E2E8F0" Foreground="#1E293B" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnUndo_Click" />
-                        <Button x:Name="btnRedo" Content="↷ Redo" Background="#E2E8F0" Foreground="#1E293B" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnRedo_Click" />
-                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="btnCropSelection" Content="✂️ Potong Area (Crop)" Background="#DCFCE7" Foreground="#166534" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnCropSelection_Click" />
+                            <Button x:Name="btnResetCrop" Content="↺ Reset Asli" Background="#F8FAFC" Foreground="#475569" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnResetCrop_Click" />
+                            <Button x:Name="btnUndo" Content="↶ Undo" Background="#E2E8F0" Foreground="#1E293B" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnUndo_Click" />
+                            <Button x:Name="btnRedo" Content="↷ Redo" Background="#E2E8F0" Foreground="#1E293B" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnRedo_Click" />
+                        </StackPanel>
+
+                        <!-- Zoom Controls: Ketik angka atau klik tombol +/- -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock Text="Zoom:" VerticalAlignment="Center" FontSize="12" Foreground="#475569" FontWeight="SemiBold" />
+                            <Button x:Name="btnZoomOut" Content="➖" Padding="8,4" Background="#E2E8F0" CornerRadius="4" Click="btnZoomOut_Click" />
+                            <NumericUpDown x:Name="numZoom" Minimum="25" Maximum="500" Value="100" FormatString="0'%'" Width="85" VerticalAlignment="Center" ValueChanged="numZoom_ValueChanged" />
+                            <Button x:Name="btnZoomIn" Content="➕" Padding="8,4" Background="#E2E8F0" CornerRadius="4" Click="btnZoomIn_Click" />
+                        </StackPanel>
+                    </Grid>
                 </Border>
 
-                <!-- Preview Area -->
-                <Border Grid.Row="1" Background="#E2E8F0" Padding="16">
+                <!-- Preview Area with ScrollViewer & Zoom -->
+                <Border Grid.Row="1" Background="#CBD5E1" Padding="16">
                     <Border Background="White" CornerRadius="8" BoxShadow="0 4 12 0 #20000000" ClipToBounds="True">
                         <Grid>
-                            <Image x:Name="imgPreview" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <LayoutTransformControl x:Name="transformControl">
+                                        <Image x:Name="imgPreview" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </LayoutTransformControl>
+                                </Grid>
+                            </ScrollViewer>
                             <TextBlock x:Name="txtPlaceholder" Text="Belum ada dokumen yang dipindai / dimuat.&#x0a;Klik salah satu tombol aksi di bawah untuk memulai."
-                                       TextAlignment="Center" Foreground="#94A3B8" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                       TextAlignment="Center" Foreground="#94A3B8" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
                         </Grid>
                     </Border>
                 </Border>

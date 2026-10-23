@@ -238,6 +238,33 @@ namespace Fotocopy.Desktop
             txtStatus.Text = "Pengaturan default berhasil disimpan.";
         }
 
+        private void btnZoomIn_Click(object? sender, RoutedEventArgs e)
+        {
+            decimal next = (numZoom.Value ?? 100) + 10;
+            if (next <= numZoom.Maximum)
+            {
+                numZoom.Value = next;
+            }
+        }
+
+        private void btnZoomOut_Click(object? sender, RoutedEventArgs e)
+        {
+            decimal next = (numZoom.Value ?? 100) - 10;
+            if (next >= numZoom.Minimum)
+            {
+                numZoom.Value = next;
+            }
+        }
+
+        private void numZoom_ValueChanged(object? sender, NumericUpDownValueChangedEventArgs e)
+        {
+            if (transformControl != null && numZoom != null)
+            {
+                double factor = (double)(numZoom.Value ?? 100) / 100.0;
+                transformControl.LayoutTransform = new Avalonia.Media.ScaleTransform(factor, factor);
+            }
+        }
+
         private void OnSettingChanged(object? sender, RoutedEventArgs e)
         {
             // Trigger perubahan setting layout
