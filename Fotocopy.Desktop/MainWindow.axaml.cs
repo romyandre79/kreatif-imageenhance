@@ -375,7 +375,19 @@ namespace Fotocopy.Desktop
                 return;
             }
 
-            txtStatus.Text = "Sedang memproses AI background replacement (mohon tunggu)...";
+            // Tampilkan Dialog Pemilih Warna (Color Picker Dialog)
+            var chosenColor = await ShowColorPickerDialogAsync();
+            if (chosenColor == null)
+            {
+                txtStatus.Text = "Penggantian warna background dibatalkan.";
+                return;
+            }
+
+            byte r = chosenColor.Value.R;
+            byte g = chosenColor.Value.G;
+            byte b = chosenColor.Value.B;
+
+            txtStatus.Text = $"Sedang memproses AI background replacement ke RGB({r}, {g}, {b})...";
             btnChangeBg.IsEnabled = false;
 
             string outPath = Path.Combine(Path.GetTempPath(), $"bg_{Guid.NewGuid():N}.png");
@@ -395,7 +407,7 @@ namespace Fotocopy.Desktop
                     var psi = new ProcessStartInfo
                     {
                         FileName = pythonCmd,
-                        Arguments = $"\"{scriptPath}\" \"{_currentImagePath}\" \"{outPath}\" 255 255 255",
+                        Arguments = $"\"{scriptPath}\" \"{_currentImagePath}\" \"{outPath}\" {r} {g} {b}",
                         UseShellExecute = false,
                         CreateNoWindow = true
                     };
@@ -407,7 +419,7 @@ namespace Fotocopy.Desktop
                 if (File.Exists(outPath))
                 {
                     LoadImageToPreview(outPath);
-                    txtStatus.Text = "Warna background berhasil diganti oleh AI.";
+                    txtStatus.Text = $"Warna background berhasil diubah menjadi RGB({r}, {g}, {b}) oleh AI.";
                 }
                 else
                 {
@@ -422,6 +434,141 @@ namespace Fotocopy.Desktop
             {
                 btnChangeBg.IsEnabled = true;
             }
+        }
+
+        private async Task<Avalonia.Media.Color?> ShowColorPickerDialogAsync()
+        {
+            var dialog = new Window
+            {
+                Title = "Pilih Warna Latar Belakang (Background)",
+                Width = 480,
+                Height = 490,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            Avalonia.Media.Color selected = Avalonia.Media.Colors.Red; // Default merah untuk pasfoto
+            bool isConfirmed = false;
+
+            var rootBorder = new Border
+            {
+                Background = Avalonia.Media.Brushes.White,
+                Padding = new Avalonia.Thickness(20)
+            };
+
+            var mainPanel = new StackPanel { Spacing = 14 };
+
+            mainPanel.Children.Add(new TextBlock
+            {
+                Text = "🎨 Pilih Warna Baru Latar Belakang",
+                FontSize = 16,
+                FontWeight = Avalonia.Media.FontWeight.Bold,
+                Foreground = Avalonia.Media.Brush.Parse("#0F172A")
+            });
+
+            // Preset Warna Standar (Pasfoto Merah, Pasfoto Biru, Putih, Kuning, Hijau)
+            var presetLabel = new TextBlock
+            {
+                Text = "Pilihan Cepat Warna Pasfoto:",
+                FontSize = 12,
+                FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                Foreground = Avalonia.Media.Brush.Parse("#475569")
+            };
+            mainPanel.Children.Add(presetLabel);
+
+            var presetsPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+
+            var colorView = new Avalonia.Controls.ColorPicker
+            {
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                Color = selected,
+                IsAlphaEnabled = false
+            };
+            colorView.ColorChanged += (s, e) => selected = e.NewColor;
+
+            void AddPresetButton(string label, Avalonia.Media.Color col, string bgHex, string fgHex)
+            {
+                var btn = new Button
+                {
+                    Content = label,
+                    Background = Avalonia.Media.Brush.Parse(bgHex),
+                    Foreground = Avalonia.Media.Brush.Parse(fgHex),
+                    FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                    Padding = new Avalonia.Thickness(12, 6),
+                    CornerRadius = new Avalonia.CornerRadius(6)
+                };
+                btn.Click += (s, e) =>
+                {
+                    selected = col;
+                    colorView.Color = col;
+                };
+                presetsPanel.Children.Add(btn);
+            }
+
+            AddPresetButton("🔴 Merah (Ganjil)", Avalonia.Media.Color.FromRgb(219, 39, 119), "#FEE2E2", "#DC2626");
+            AddPresetButton("🔵 Biru (Genap)", Avalonia.Media.Color.FromRgb(37, 99, 235), "#DBEAFE", "#2563EB");
+            AddPresetButton("⚪ Putih", Avalonia.Media.Colors.White, "#F1F5F9", "#0F172A");
+            AddPresetButton("🟡 Kuning", Avalonia.Media.Color.FromRgb(234, 179, 8), "#FEF9C3", "#CA8A04");
+
+            mainPanel.Children.Add(presetsPanel);
+
+            // Palet Warna Bebas
+            mainPanel.Children.Add(new TextBlock
+            {
+                Text = "Atau tentukan warna kustom di bawah:",
+                FontSize = 12,
+                FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                Foreground = Avalonia.Media.Brush.Parse("#475569"),
+                Margin = new Avalonia.Thickness(0, 4, 0, 0)
+            });
+
+            mainPanel.Children.Add(colorView);
+
+            // Tombol Konfirmasi
+            var buttonBar = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                Spacing = 10,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                Margin = new Avalonia.Thickness(0, 10, 0, 0)
+            };
+
+            var btnCancel = new Button
+            {
+                Content = "Batal",
+                Padding = new Avalonia.Thickness(16, 8),
+                Background = Avalonia.Media.Brush.Parse("#F1F5F9"),
+                Foreground = Avalonia.Media.Brush.Parse("#475569"),
+                CornerRadius = new Avalonia.CornerRadius(6)
+            };
+            btnCancel.Click += (s, e) => dialog.Close();
+
+            var btnOk = new Button
+            {
+                Content = "✓ Terapkan Warna",
+                Padding = new Avalonia.Thickness(20, 8),
+                Background = Avalonia.Media.Brush.Parse("#2563EB"),
+                Foreground = Avalonia.Media.Brushes.White,
+                FontWeight = Avalonia.Media.FontWeight.Bold,
+                CornerRadius = new Avalonia.CornerRadius(6)
+            };
+            btnOk.Click += (s, e) =>
+            {
+                selected = colorView.Color;
+                isConfirmed = true;
+                dialog.Close();
+            };
+
+            buttonBar.Children.Add(btnCancel);
+            buttonBar.Children.Add(btnOk);
+            mainPanel.Children.Add(buttonBar);
+
+            rootBorder.Child = mainPanel;
+            dialog.Content = rootBorder;
+
+            await dialog.ShowDialog(this);
+
+            return isConfirmed ? selected : null;
         }
 
         private void btnCropSelection_Click(object? sender, RoutedEventArgs e)
