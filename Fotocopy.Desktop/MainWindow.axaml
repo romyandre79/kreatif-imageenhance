@@ -1,0 +1,222 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="780"
+        x:Class="Fotocopy.Desktop.MainWindow"
+        Title="Fotocopy Desktop - Linux &amp; Windows (SANE / CUPS)"
+        Width="1200" Height="780"
+        WindowStartupLocation="CenterScreen">
+    
+    <Grid RowDefinitions="Auto, *, Auto, Auto">
+        <!-- 1. Header Toolbar -->
+        <Border Grid.Row="0" Background="#1E293B" Padding="14,8">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="🖨️ FOTOCOPY DESKTOP" Foreground="White" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
+                    <Border Background="#334155" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                        <TextBlock x:Name="txtPlatformBadge" Text="Platform: Linux (SANE + CUPS)" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" />
+                    </Border>
+                    <!-- Menu About -->
+                    <Menu Background="Transparent" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <MenuItem Header="ℹ️ Bantuan" Foreground="#CBD5E1">
+                            <MenuItem Header="Tentang Aplikasi (About)" Click="btnAbout_Click" />
+                        </MenuItem>
+                    </Menu>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="btnAbout" Content="ℹ️ About" Background="#334155" Foreground="#E2E8F0" FontWeight="SemiBold" Padding="10,6" CornerRadius="6" Click="btnAbout_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. Main Body (Left: Settings Sidebar, Right: Preview with Crop Toolbar) -->
+        <Grid Grid.Row="1" ColumnDefinitions="380, *">
+            <!-- Sidebar Controls -->
+            <Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,0,1,0" Padding="14">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12">
+                        <!-- Perangkat Scanner -->
+                        <Border Background="White" CornerRadius="8" BorderBrush="#CBD5E1" BorderThickness="1" Padding="12">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Koneksi Scanner :" FontWeight="SemiBold" Foreground="#0F172A" />
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <ComboBox x:Name="cmbScanners" Grid.Column="0" HorizontalAlignment="Stretch" SelectedIndex="0" />
+                                    <Button x:Name="btnScannerProp" Grid.Column="1" Content="⚙ Setting" Margin="6,0,0,0" Padding="10,6" Click="btnScannerProp_Click" />
+                                </Grid>
+                                <Button x:Name="btnRefreshDevices" Content="🔄 Segarkan Daftar Alat" HorizontalAlignment="Stretch" Click="btnRefreshDevices_Click" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Perangkat Printer -->
+                        <Border Background="White" CornerRadius="8" BorderBrush="#CBD5E1" BorderThickness="1" Padding="12">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Pilihan Printer :" FontWeight="SemiBold" Foreground="#0F172A" />
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <ComboBox x:Name="cmbPrinters" Grid.Column="0" HorizontalAlignment="Stretch" SelectedIndex="0" />
+                                    <Button x:Name="btnPrinterProp" Grid.Column="1" Content="⚙ Setting" Margin="6,0,0,0" Padding="10,6" Click="btnPrinterProp_Click" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Pengaturan Kertas, Rangkap, Skala -->
+                        <Border Background="White" CornerRadius="8" BorderBrush="#CBD5E1" BorderThickness="1" Padding="12">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Pengaturan Halaman &amp; Layout" FontWeight="Bold" Foreground="#0F172A" />
+                                
+                                <Grid ColumnDefinitions="*, *">
+                                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
+                                        <TextBlock Text="Ukuran Kertas" FontSize="11" Foreground="#64748B" />
+                                        <ComboBox x:Name="cmbPaperSize" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnSettingChanged">
+                                            <ComboBoxItem Content="A4" />
+                                            <ComboBoxItem Content="F4 / Folio" />
+                                            <ComboBoxItem Content="Legal" />
+                                            <ComboBoxItem Content="Letter" />
+                                            <ComboBoxItem Content="A3" />
+                                            <ComboBoxItem Content="A5" />
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
+                                        <TextBlock Text="Jumlah Rangkap" FontSize="11" Foreground="#64748B" />
+                                        <NumericUpDown x:Name="numCopies" Minimum="1" Maximum="99" Value="1" FormatString="0" HorizontalAlignment="Stretch" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*, *">
+                                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,4,0">
+                                        <TextBlock Text="Isi per Lembar" FontSize="11" Foreground="#64748B" />
+                                        <ComboBox x:Name="cmbItemsPerSheet" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnSettingChanged">
+                                            <ComboBoxItem Content="1 Gambar (Utuh)" />
+                                            <ComboBoxItem Content="2 Gambar (KTP Bolak-balik)" />
+                                            <ComboBoxItem Content="4 Gambar (KTP)" />
+                                            <ComboBoxItem Content="6 Gambar (KTP)" />
+                                            <ComboBoxItem Content="8 Gambar (KTP)" />
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Spacing="4" Margin="4,0,0,0">
+                                        <TextBlock Text="Skala Gambar (%)" FontSize="11" Foreground="#64748B" />
+                                        <NumericUpDown x:Name="numScale" Minimum="10" Maximum="300" Value="100" FormatString="0" HorizontalAlignment="Stretch" ValueChanged="OnSettingChanged" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Margin Kertas (mm) -->
+                                <TextBlock Text="Margin Kertas (mm):" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,4,0,0" />
+                                <Grid ColumnDefinitions="*, *, *, *">
+                                    <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,2,0">
+                                        <TextBlock Text="Atas" FontSize="10" Foreground="#64748B" />
+                                        <NumericUpDown x:Name="numMarginTop" Minimum="0" Maximum="100" Value="10" FormatString="0" ValueChanged="OnSettingChanged" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="2" Margin="2,0,2,0">
+                                        <TextBlock Text="Bawah" FontSize="10" Foreground="#64748B" />
+                                        <NumericUpDown x:Name="numMarginBottom" Minimum="0" Maximum="100" Value="10" FormatString="0" ValueChanged="OnSettingChanged" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="2" Margin="2,0,2,0">
+                                        <TextBlock Text="Kiri" FontSize="10" Foreground="#64748B" />
+                                        <NumericUpDown x:Name="numMarginLeft" Minimum="0" Maximum="100" Value="10" FormatString="0" ValueChanged="OnSettingChanged" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" Spacing="2" Margin="2,0,0,0">
+                                        <TextBlock Text="Kanan" FontSize="10" Foreground="#64748B" />
+                                        <NumericUpDown x:Name="numMarginRight" Minimum="0" Maximum="100" Value="10" FormatString="0" ValueChanged="OnSettingChanged" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Checkbox Options -->
+                                <CheckBox x:Name="chkFitPage" Content="Sesuaikan Ukuran Kertas (Auto-Fit)" IsChecked="True" Click="OnSettingChanged" />
+                                <CheckBox x:Name="chkShowScannerUI" Content="Tampilkan Dialog Driver Scanner" IsChecked="False" />
+                                <CheckBox x:Name="chkCleanDarkBg" Content="Bersihkan Latar Hitam Penutup Scanner" IsChecked="True" />
+                                <CheckBox x:Name="chkAutoCrop" Content="Deteksi &amp; Crop Otomatis Batas Dokumen" IsChecked="False" />
+
+                                <Button x:Name="btnSaveSettings" Content="💾 Simpan Pengaturan Default" HorizontalAlignment="Stretch" Margin="0,4,0,0" Click="btnSaveSettings_Click" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Preview Viewport dengan Crop Toolbar -->
+            <Grid Grid.Column="1" RowDefinitions="Auto, *">
+                <!-- Crop & Undo Toolbar -->
+                <Border Grid.Row="0" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="0,0,0,1" Padding="12,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="btnCropSelection" Content="✂️ Potong Area (Crop)" Background="#DCFCE7" Foreground="#166534" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnCropSelection_Click" />
+                        <Button x:Name="btnResetCrop" Content="↺ Reset Asli" Background="#F8FAFC" Foreground="#475569" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnResetCrop_Click" />
+                        <Button x:Name="btnUndo" Content="↶ Undo" Background="#E2E8F0" Foreground="#1E293B" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnUndo_Click" />
+                        <Button x:Name="btnRedo" Content="↷ Redo" Background="#E2E8F0" Foreground="#1E293B" FontWeight="SemiBold" Padding="12,6" CornerRadius="6" IsEnabled="False" Click="btnRedo_Click" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Preview Area -->
+                <Border Grid.Row="1" Background="#E2E8F0" Padding="16">
+                    <Border Background="White" CornerRadius="8" BoxShadow="0 4 12 0 #20000000" ClipToBounds="True">
+                        <Grid>
+                            <Image x:Name="imgPreview" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <TextBlock x:Name="txtPlaceholder" Text="Belum ada dokumen yang dipindai / dimuat.&#x0a;Klik salah satu tombol aksi di bawah untuk memulai."
+                                       TextAlignment="Center" Foreground="#94A3B8" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- 3. Bottom Action Bar (Identik persis dengan tombol Form1 Windows Forms) -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="16,10">
+            <Grid ColumnDefinitions="*, *, *, *, 1.4*">
+                <!-- 1. Upload Gambar -->
+                <Button x:Name="btnUploadImage" Grid.Column="0" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
+                        Background="#F3E8FF" Foreground="#7E22CE" FontWeight="SemiBold" CornerRadius="8" Click="btnUploadImage_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="📁 Upload Gambar" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
+                        <TextBlock Text="Buka file JPG/PNG" FontSize="10" Foreground="#A855F7" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- 2. Scan Preview -->
+                <Button x:Name="btnScanPreview" Grid.Column="1" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
+                        Background="#F0F9FF" Foreground="#0284C7" FontWeight="SemiBold" CornerRadius="8" Click="btnScanPreview_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="👁️ Scan Preview" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
+                        <TextBlock Text="Pratinjau sebelum cetak" FontSize="10" Foreground="#38BDF8" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- 3. Scan Dokumen -->
+                <Button x:Name="btnScanOnly" Grid.Column="2" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
+                        Background="#E0F2FE" Foreground="#0369A1" FontWeight="SemiBold" CornerRadius="8" Click="btnScanOnly_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="📄 Scan Dokumen" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
+                        <TextBlock Text="Simpan/muat hasil scan" FontSize="10" Foreground="#0284C7" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- 4. Ganti Warna BG -->
+                <Button x:Name="btnChangeBg" Grid.Column="3" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
+                        Background="#FEF2F2" Foreground="#B91C1C" FontWeight="SemiBold" CornerRadius="8" Click="btnChangeBg_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="🎨 Ganti Warna BG" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
+                        <TextBlock Text="AI Pasfoto / Dokumen" FontSize="10" Foreground="#EF4444" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- 5. Cetak / Copy -->
+                <Button x:Name="btnCopy" Grid.Column="4" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
+                        Background="#2563EB" Foreground="White" FontWeight="Bold" CornerRadius="8" Click="btnCopy_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="⚡ CETAK / COPY" FontWeight="Bold" FontSize="15" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="Scan &amp; langsung cetak" FontSize="11" Foreground="#BFDBFE" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 4. Status Bar -->
+        <Border Grid.Row="3" Background="#0F172A" Padding="14,6">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock x:Name="txtStatus" Grid.Column="0" Text="Siap. Sistem terintegrasi dengan SANE &amp; CUPS Linux." Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Prisma Data Abadi, Jl Mrutu Kalianyar 1c Surabaya" Foreground="#64748B" FontSize="11" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
