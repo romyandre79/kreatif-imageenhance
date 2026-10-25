@@ -170,6 +170,7 @@ namespace Fotocopy
             }
 
             SetupNumericControlSync();
+            SetupPhotoPresetsMenu();
             LoadSavedSettings();
             RefreshDeviceList();
             UpdatePreviewDisplay();
@@ -188,7 +189,7 @@ namespace Fotocopy
                     chkAutoCrop.Checked = Settings.Default.AutoCrop;
 
                     int items = Settings.Default.ItemsPerSheet;
-                    SelectItemsPerSheetCombo(items);
+                    numItemsPerSheet.Value = Math.Max(1, Math.Min(100, items > 0 ? items : 1));
 
                     string savedPaper = Settings.Default.PaperSize ?? "A4";
                     SelectPaperSizeCombo(savedPaper);
@@ -234,30 +235,9 @@ namespace Fotocopy
             return "A4";
         }
 
-        private void SelectItemsPerSheetCombo(int count)
-        {
-            switch (count)
-            {
-                case 2: cbItemsPerSheet.SelectedIndex = 1; break;
-                case 3: cbItemsPerSheet.SelectedIndex = 2; break;
-                case 4: cbItemsPerSheet.SelectedIndex = 3; break;
-                case 6: cbItemsPerSheet.SelectedIndex = 4; break;
-                case 8: cbItemsPerSheet.SelectedIndex = 5; break;
-                default: cbItemsPerSheet.SelectedIndex = 0; break;
-            }
-        }
-
         private int GetCurrentItemsPerSheet()
         {
-            switch (cbItemsPerSheet.SelectedIndex)
-            {
-                case 1: return 2;
-                case 2: return 3;
-                case 3: return 4;
-                case 4: return 6;
-                case 5: return 8;
-                default: return 1;
-            }
+            return (int)numItemsPerSheet.Value;
         }
 
         private void RefreshDeviceList()
@@ -422,7 +402,7 @@ namespace Fotocopy
             }
         }
 
-        private void cbItemsPerSheet_SelectedIndexChanged(object sender, EventArgs e)
+        private void numItemsPerSheet_ValueChanged(object sender, EventArgs e)
         {
             UpdatePreviewDisplay();
         }
@@ -436,7 +416,7 @@ namespace Fotocopy
 
         private void SetupNumericControlSync()
         {
-            NumericUpDown[] controls = new NumericUpDown[] { numMarginTop, numMarginBottom, numMarginLeft, numMarginRight, numScale, numCopies, numZoom };
+            NumericUpDown[] controls = new NumericUpDown[] { numMarginTop, numMarginBottom, numMarginLeft, numMarginRight, numScale, numCopies, numItemsPerSheet };
             foreach (var num in controls)
             {
                 num.InterceptArrowKeys = true;
@@ -455,19 +435,6 @@ namespace Fotocopy
                     CommitNumericInput(s as NumericUpDown);
                 };
             }
-
-            // Mouse wheel zoom pada preview gambar
-            picPreview.MouseWheel += (s, e) =>
-            {
-                if (e.Delta > 0)
-                {
-                    btnZoomIn.PerformClick();
-                }
-                else if (e.Delta < 0)
-                {
-                    btnZoomOut.PerformClick();
-                }
-            };
         }
 
         private void CommitNumericInput(NumericUpDown num)
@@ -621,25 +588,6 @@ namespace Fotocopy
                     }
                 }
 
-                int zoomPercent = (int)numZoom.Value;
-                if (zoomPercent != 100)
-                {
-                    float zoomFactor = zoomPercent / 100f;
-                    int zoomedW = Math.Max(50, (int)Math.Round(pageCanvas.Width * zoomFactor));
-                    int zoomedH = Math.Max(50, (int)Math.Round(pageCanvas.Height * zoomFactor));
-
-                    Bitmap zoomedCanvas = new Bitmap(zoomedW, zoomedH);
-                    using (Graphics gz = Graphics.FromImage(zoomedCanvas))
-                    {
-                        gz.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                        gz.SmoothingMode = SmoothingMode.HighQuality;
-                        gz.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                        gz.DrawImage(pageCanvas, 0, 0, zoomedW, zoomedH);
-                    }
-                    pageCanvas.Dispose();
-                    pageCanvas = zoomedCanvas;
-                }
-
                 _renderedPreviewImage?.Dispose();
                 _renderedPreviewImage = pageCanvas;
                 picPreview.Image = _renderedPreviewImage;
@@ -650,29 +598,6 @@ namespace Fotocopy
             {
                 System.Diagnostics.Debug.WriteLine($"UpdatePreviewDisplay error: {ex.Message}");
             }
-        }
-
-        private void btnZoomIn_Click(object sender, EventArgs e)
-        {
-            decimal next = numZoom.Value + 10;
-            if (next <= numZoom.Maximum)
-            {
-                numZoom.Value = next;
-            }
-        }
-
-        private void btnZoomOut_Click(object sender, EventArgs e)
-        {
-            decimal next = numZoom.Value - 10;
-            if (next >= numZoom.Minimum)
-            {
-                numZoom.Value = next;
-            }
-        }
-
-        private void numZoom_ValueChanged(object sender, EventArgs e)
-        {
-            UpdatePreviewDisplay();
         }
 
         // ==========================================
@@ -700,8 +625,9 @@ namespace Fotocopy
                             _rawScannedImage = new Bitmap(uploaded);
                         }
 
-                        // Reset skala ke 100%
+                        // Reset skala ke 100% dan matikan fit page agar ukuran gambar apa adanya (WYSIWYG)
                         numScale.Value = 100;
+                        chkFitPage.Checked = false;
 
                         // Bersihkan riwayat undo/redo untuk gambar baru
                         ClearUndoRedo();
@@ -935,8 +861,9 @@ namespace Fotocopy
             _rawScannedImage?.Dispose();
             _rawScannedImage = img;
 
-            // Reset skala ke 100% (tanpa scale) untuk hasil scan baru
+            // Reset skala ke 100% dan matikan fit page agar hasil scan berukuran asli (WYSIWYG)
             numScale.Value = 100;
+            chkFitPage.Checked = false;
 
             // Bersihkan riwayat undo/redo untuk hasil scan baru
             ClearUndoRedo();
@@ -1033,47 +960,115 @@ namespace Fotocopy
         }
 
         /// <summary>
-        /// Mengkonversi koordinat kotak seleksi mouse pada PictureBox (Zoom mode) ke koordinat pixel gambar asli.
+        /// Mengkonversi koordinat kotak seleksi mouse pada PictureBox ke koordinat pixel gambar objek asli.
         /// </summary>
-        private Rectangle GetImageCoordinatesFromPictureBox(Rectangle clientRect, Image img)
+        private Rectangle GetImageCoordinatesFromPictureBox(Rectangle clientRect, Image sourceImg)
         {
-            if (img == null || clientRect.Width <= 0 || clientRect.Height <= 0)
+            if (sourceImg == null || clientRect.Width <= 0 || clientRect.Height <= 0)
                 return Rectangle.Empty;
+
+            Image renderedImg = _renderedPreviewImage;
+            if (renderedImg == null) return Rectangle.Empty;
 
             float pbW = picPreview.ClientSize.Width;
             float pbH = picPreview.ClientSize.Height;
-            float imgW = img.Width;
-            float imgH = img.Height;
+            float canvasW = renderedImg.Width;
+            float canvasH = renderedImg.Height;
 
-            // Hitung aspect ratio zoom
-            float ratio = Math.Min(pbW / imgW, pbH / imgH);
-            float displayedW = imgW * ratio;
-            float displayedH = imgH * ratio;
+            // 1. Skala PictureBoxSizeMode.Zoom untuk kanvas kertas
+            float ratio = Math.Min(pbW / canvasW, pbH / canvasH);
+            float displayedW = canvasW * ratio;
+            float displayedH = canvasH * ratio;
 
             float offsetX = (pbW - displayedW) / 2f;
             float offsetY = (pbH - displayedH) / 2f;
 
-            // Batasi kotak ke area tampilan gambar sebenarnya
-            float x1 = Math.Max(offsetX, Math.Min(clientRect.Left, offsetX + displayedW));
-            float y1 = Math.Max(offsetY, Math.Min(clientRect.Top, offsetY + displayedH));
-            float x2 = Math.Max(offsetX, Math.Min(clientRect.Right, offsetX + displayedW));
-            float y2 = Math.Max(offsetY, Math.Min(clientRect.Bottom, offsetY + displayedH));
+            // Konversi seleksi mouse di PictureBox ke koordinat pixel kanvas preview (150 DPI)
+            float cX1 = (clientRect.Left - offsetX) / ratio;
+            float cY1 = (clientRect.Top - offsetY) / ratio;
+            float cX2 = (clientRect.Right - offsetX) / ratio;
+            float cY2 = (clientRect.Bottom - offsetY) / ratio;
 
-            float selW = x2 - x1;
-            float selH = y2 - y1;
+            // 2. Cari posisi (destX, destY) dan ukuran (destW, destH) gambar di atas kanvas preview
+            int mTop = (int)Math.Round(((float)numMarginTop.Value / 25.4f) * 150);
+            int mBottom = (int)Math.Round(((float)numMarginBottom.Value / 25.4f) * 150);
+            int mLeft = (int)Math.Round(((float)numMarginLeft.Value / 25.4f) * 150);
+            int mRight = (int)Math.Round(((float)numMarginRight.Value / 25.4f) * 150);
+            int scale = (int)numScale.Value;
+            float scaleMultiplier = Math.Max(0.1f, Math.Min(3.0f, scale / 100f));
 
-            if (selW <= 0 || selH <= 0) return Rectangle.Empty;
+            int printableW = Math.Max(100, (int)canvasW - (mLeft + mRight));
+            int printableH = Math.Max(100, (int)canvasH - (mTop + mBottom));
 
-            // Skalakan ke resolusi pixel gambar asli
-            int origX = (int)Math.Round((x1 - offsetX) / ratio);
-            int origY = (int)Math.Round((y1 - offsetY) / ratio);
-            int origW = (int)Math.Round(selW / ratio);
-            int origH = (int)Math.Round(selH / ratio);
+            float canvasDpi = canvasW / (210f / 25.4f);
+            float srcDpiX = sourceImg.HorizontalResolution > 0 ? sourceImg.HorizontalResolution : 300f;
+            float srcDpiY = sourceImg.VerticalResolution > 0 ? sourceImg.VerticalResolution : 300f;
+            float dpiRatioX = canvasDpi / srcDpiX;
+            float dpiRatioY = canvasDpi / srcDpiY;
 
-            origX = Math.Max(0, Math.Min(origX, img.Width - 1));
-            origY = Math.Max(0, Math.Min(origY, img.Height - 1));
-            origW = Math.Min(origW, img.Width - origX);
-            origH = Math.Min(origH, img.Height - origY);
+            int naturalW = (int)Math.Round(sourceImg.Width * dpiRatioX * scaleMultiplier);
+            int naturalH = (int)Math.Round(sourceImg.Height * dpiRatioY * scaleMultiplier);
+
+            int imgDestX, imgDestY, imgDestW, imgDestH;
+
+            if (chkFitPage.Checked)
+            {
+                float imgAspect = (float)sourceImg.Width / Math.Max(1, sourceImg.Height);
+                float printAspect = (float)printableW / Math.Max(1, printableH);
+
+                if (imgAspect > printAspect)
+                {
+                    imgDestW = printableW;
+                    imgDestH = (int)(printableW / imgAspect);
+                }
+                else
+                {
+                    imgDestH = printableH;
+                    imgDestW = (int)(printableH * imgAspect);
+                }
+
+                if (scale != 100)
+                {
+                    imgDestW = (int)Math.Round(imgDestW * scaleMultiplier);
+                    imgDestH = (int)Math.Round(imgDestH * scaleMultiplier);
+                }
+
+                imgDestX = mLeft + Math.Max(0, (printableW - imgDestW) / 2);
+                imgDestY = mTop;
+            }
+            else
+            {
+                imgDestX = mLeft;
+                imgDestY = mTop;
+                imgDestW = naturalW;
+                imgDestH = naturalH;
+            }
+
+            // 3. Batasi koordinat seleksi ke dalam bounding box gambar pada kanvas
+            float cropX1 = Math.Max(imgDestX, Math.Min(cX1, imgDestX + imgDestW));
+            float cropY1 = Math.Max(imgDestY, Math.Min(cY1, imgDestY + imgDestH));
+            float cropX2 = Math.Max(imgDestX, Math.Min(cX2, imgDestX + imgDestW));
+            float cropY2 = Math.Max(imgDestY, Math.Min(cY2, imgDestY + imgDestH));
+
+            float cropW = cropX2 - cropX1;
+            float cropH = cropY2 - cropY1;
+
+            if (cropW <= 0 || cropH <= 0 || imgDestW <= 0 || imgDestH <= 0)
+                return Rectangle.Empty;
+
+            // 4. Skalakan kembali ke pixel resolusi asli sourceImg
+            float scaleToOrigX = (float)sourceImg.Width / imgDestW;
+            float scaleToOrigY = (float)sourceImg.Height / imgDestH;
+
+            int origX = (int)Math.Round((cropX1 - imgDestX) * scaleToOrigX);
+            int origY = (int)Math.Round((cropY1 - imgDestY) * scaleToOrigY);
+            int origW = (int)Math.Round(cropW * scaleToOrigX);
+            int origH = (int)Math.Round(cropH * scaleToOrigY);
+
+            origX = Math.Max(0, Math.Min(origX, sourceImg.Width - 1));
+            origY = Math.Max(0, Math.Min(origY, sourceImg.Height - 1));
+            origW = Math.Max(1, Math.Min(origW, sourceImg.Width - origX));
+            origH = Math.Max(1, Math.Min(origH, sourceImg.Height - origY));
 
             return new Rectangle(origX, origY, origW, origH);
         }
@@ -1115,6 +1110,349 @@ namespace Fotocopy
 
             ReprocessScannedImage();
             UpdateStatus("Area gambar dikembalikan ke hasil scan asli.");
+        }
+
+        private void btnAutoEnhance_Click(object sender, EventArgs e)
+        {
+            Image activeImage = _enhancedImage ?? _rawScannedImage;
+            if (activeImage == null)
+            {
+                MessageBox.Show("Silakan scan dokumen atau upload gambar terlebih dahulu.", "Pemberitahuan", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                PushUndoState(activeImage);
+                UpdateStatus("Sedang mengoptimalkan foto agar jernih dan tajam...");
+
+                var enhanced = ImageEnhanceService.AutoEnhancePhoto(activeImage);
+                if (enhanced != null)
+                {
+                    _enhancedImage?.Dispose();
+                    _enhancedImage = enhanced;
+                    btnResetCrop.Enabled = true;
+                    UpdatePreviewDisplay();
+                    UpdateStatus("Foto berhasil diperbagus otomatis (Auto-contrast, de-blur, dan penajaman diterapkan).");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Gagal memproses gambar: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnAdjustments_Click(object sender, EventArgs e)
+        {
+            Image activeImage = _enhancedImage ?? _rawScannedImage;
+            if (activeImage == null)
+            {
+                MessageBox.Show("Silakan scan dokumen atau upload gambar terlebih dahulu.", "Pemberitahuan", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            ShowAdjustmentsDialog(activeImage);
+        }
+
+        /// <summary>
+        /// Menampilkan dialog popup interaktif untuk mengatur Brightness, Contrast, dan Sharpness secara langsung.
+        /// </summary>
+        private void ShowAdjustmentsDialog(Image targetImage)
+        {
+            using (Form dlg = new Form())
+            {
+                dlg.Text = "Pengaturan Kontras, Kecerahan & Ketajaman";
+                dlg.Size = new Size(390, 340);
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = Color.FromArgb(248, 250, 252);
+                dlg.Font = new Font("Segoe UI", 9F);
+
+                // Label & TrackBar Brightness (-100 s/d 100)
+                Label lblBTitle = new Label { Text = "☀️ Kecerahan (Brightness):", Location = new Point(20, 15), AutoSize = true, Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold) };
+                Label lblBVal = new Label { Text = "0", Location = new Point(310, 15), AutoSize = true, ForeColor = Color.FromArgb(79, 70, 229), Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold) };
+                TrackBar tbBrightness = new TrackBar { Minimum = -100, Maximum = 100, Value = 0, TickFrequency = 20, SmallChange = 5, LargeChange = 20, Location = new Point(20, 38), Width = 330 };
+
+                // Label & TrackBar Contrast (-100 s/d 100)
+                Label lblCTitle = new Label { Text = "🌓 Kontras (Contrast):", Location = new Point(20, 85), AutoSize = true, Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold) };
+                Label lblCVal = new Label { Text = "0", Location = new Point(310, 85), AutoSize = true, ForeColor = Color.FromArgb(79, 70, 229), Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold) };
+                TrackBar tbContrast = new TrackBar { Minimum = -100, Maximum = 100, Value = 0, TickFrequency = 20, SmallChange = 5, LargeChange = 20, Location = new Point(20, 108), Width = 330 };
+
+                // Label & TrackBar Sharpness (0 s/d 100)
+                Label lblSTitle = new Label { Text = "🔍 Ketajaman (Sharpness):", Location = new Point(20, 155), AutoSize = true, Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold) };
+                Label lblSVal = new Label { Text = "0", Location = new Point(310, 155), AutoSize = true, ForeColor = Color.FromArgb(79, 70, 229), Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold) };
+                TrackBar tbSharpness = new TrackBar { Minimum = 0, Maximum = 100, Value = 0, TickFrequency = 10, SmallChange = 5, LargeChange = 10, Location = new Point(20, 178), Width = 330 };
+
+                // Live Preview Debounce Timer
+                Timer previewTimer = new Timer { Interval = 150 };
+                Bitmap previewOriginal = new Bitmap(targetImage);
+                Bitmap liveAdjusted = null;
+
+                Action updateValues = () =>
+                {
+                    lblBVal.Text = tbBrightness.Value > 0 ? $"+{tbBrightness.Value}" : tbBrightness.Value.ToString();
+                    lblCVal.Text = tbContrast.Value > 0 ? $"+{tbContrast.Value}" : tbContrast.Value.ToString();
+                    lblSVal.Text = tbSharpness.Value.ToString();
+                    previewTimer.Stop();
+                    previewTimer.Start();
+                };
+
+                tbBrightness.ValueChanged += (s, e) => updateValues();
+                tbContrast.ValueChanged += (s, e) => updateValues();
+                tbSharpness.ValueChanged += (s, e) => updateValues();
+
+                previewTimer.Tick += (s, e) =>
+                {
+                    previewTimer.Stop();
+                    try
+                    {
+                        var adjusted = ImageEnhanceService.AdjustImageAdjustments(previewOriginal, tbBrightness.Value, tbContrast.Value, tbSharpness.Value);
+                        if (adjusted != null)
+                        {
+                            liveAdjusted?.Dispose();
+                            liveAdjusted = adjusted;
+                            _enhancedImage?.Dispose();
+                            _enhancedImage = new Bitmap(liveAdjusted);
+                            UpdatePreviewDisplay();
+                        }
+                    }
+                    catch { }
+                };
+
+                // Tombol Otomatis Jernihkan di dalam dialog
+                Button btnAuto = new Button
+                {
+                    Text = "✨ Otomatis Perbagus / Jernihkan",
+                    Location = new Point(20, 225),
+                    Size = new Size(330, 32),
+                    BackColor = Color.FromArgb(254, 249, 195),
+                    ForeColor = Color.FromArgb(133, 77, 14),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold)
+                };
+
+                btnAuto.Click += (s, e) =>
+                {
+                    try
+                    {
+                        var autoImg = ImageEnhanceService.AutoEnhancePhoto(previewOriginal);
+                        if (autoImg != null)
+                        {
+                            previewOriginal.Dispose();
+                            previewOriginal = autoImg;
+                            tbBrightness.Value = 0;
+                            tbContrast.Value = 0;
+                            tbSharpness.Value = 0;
+                            liveAdjusted?.Dispose();
+                            liveAdjusted = new Bitmap(previewOriginal);
+                            _enhancedImage?.Dispose();
+                            _enhancedImage = new Bitmap(liveAdjusted);
+                            UpdatePreviewDisplay();
+                        }
+                    }
+                    catch { }
+                };
+
+                dlg.Size = new Size(390, 360);
+
+                // Tombol Terapkan & Batal
+                Button btnApply = new Button
+                {
+                    Text = "✓ Terapkan",
+                    DialogResult = DialogResult.OK,
+                    Location = new Point(160, 270),
+                    Size = new Size(100, 36),
+                    BackColor = Color.FromArgb(37, 99, 235),
+                    ForeColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold)
+                };
+
+                Button btnCancel = new Button
+                {
+                    Text = "Batal",
+                    DialogResult = DialogResult.Cancel,
+                    Location = new Point(270, 270),
+                    Size = new Size(80, 36),
+                    BackColor = Color.FromArgb(241, 245, 249),
+                    ForeColor = Color.FromArgb(71, 85, 105),
+                    FlatStyle = FlatStyle.Flat
+                };
+
+                Button btnReset = new Button
+                {
+                    Text = "↺ Reset",
+                    Location = new Point(20, 270),
+                    Size = new Size(80, 36),
+                    BackColor = Color.FromArgb(241, 245, 249),
+                    ForeColor = Color.FromArgb(71, 85, 105),
+                    FlatStyle = FlatStyle.Flat
+                };
+
+                btnReset.Click += (s, e) =>
+                {
+                    tbBrightness.Value = 0;
+                    tbContrast.Value = 0;
+                    tbSharpness.Value = 0;
+                };
+
+                dlg.Controls.Add(lblBTitle); dlg.Controls.Add(lblBVal); dlg.Controls.Add(tbBrightness);
+                dlg.Controls.Add(lblCTitle); dlg.Controls.Add(lblCVal); dlg.Controls.Add(tbContrast);
+                dlg.Controls.Add(lblSTitle); dlg.Controls.Add(lblSVal); dlg.Controls.Add(tbSharpness);
+                dlg.Controls.Add(btnAuto);
+                dlg.Controls.Add(btnReset); dlg.Controls.Add(btnApply); dlg.Controls.Add(btnCancel);
+
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    PushUndoState(previewOriginal);
+                    if (liveAdjusted != null)
+                    {
+                        _enhancedImage?.Dispose();
+                        _enhancedImage = new Bitmap(liveAdjusted);
+                    }
+                    else
+                    {
+                        _enhancedImage?.Dispose();
+                        _enhancedImage = ImageEnhanceService.AdjustImageAdjustments(previewOriginal, tbBrightness.Value, tbContrast.Value, tbSharpness.Value);
+                    }
+
+                    btnResetCrop.Enabled = true;
+                    UpdatePreviewDisplay();
+                    UpdateStatus($"Penyesuaian diterapkan: Kecerahan {tbBrightness.Value}, Kontras {tbContrast.Value}, Ketajaman {tbSharpness.Value}.");
+                }
+                else
+                {
+                    // Kembalikan ke gambar sebelum dialog dibuka
+                    _enhancedImage?.Dispose();
+                    _enhancedImage = new Bitmap(previewOriginal);
+                    UpdatePreviewDisplay();
+                }
+
+                previewOriginal.Dispose();
+                liveAdjusted?.Dispose();
+            }
+        }
+
+        // ==========================================
+        // PRESET UKURAN FOTO (2x3, 3x4, 4x6, 2R, 3R, 4R, KTP, dll)
+        // ==========================================
+
+        private void SetupPhotoPresetsMenu()
+        {
+            if (contextMenuPhotoPresets == null) return;
+            contextMenuPhotoPresets.Items.Clear();
+
+            // Kategori 1: Pas Foto Standar
+            var headerPasFoto = new ToolStripMenuItem("--- PAS FOTO STANDAR ---") { Enabled = false };
+            headerPasFoto.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            contextMenuPhotoPresets.Items.Add(headerPasFoto);
+
+            AddPresetMenuItem("Pas Foto 2 x 3 cm (21.6 x 27.9 mm)", "2x3");
+            AddPresetMenuItem("Pas Foto 3 x 4 cm (27.9 x 38.1 mm)", "3x4");
+            AddPresetMenuItem("Pas Foto 4 x 6 cm (38.1 x 55.9 mm)", "4x6");
+
+            contextMenuPhotoPresets.Items.Add(new ToolStripSeparator());
+
+            // Kategori 2: Ukuran Foto Seri R (Cetak Foto Studio)
+            var headerFotoR = new ToolStripMenuItem("--- CETAK FOTO R ---") { Enabled = false };
+            headerFotoR.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            contextMenuPhotoPresets.Items.Add(headerFotoR);
+
+            AddPresetMenuItem("Foto 2R (6 x 9 cm)", "2R");
+            AddPresetMenuItem("Foto 3R (8.9 x 12.7 cm / 3.5 x 5 in)", "3R");
+            AddPresetMenuItem("Foto 4R (10.2 x 15.2 cm / 4 x 6 in)", "4R");
+            AddPresetMenuItem("Foto 5R (12.7 x 17.8 cm / 5 x 7 in)", "5R");
+            AddPresetMenuItem("Foto 6R (15.2 x 20.3 cm / 6 x 8 in)", "6R");
+            AddPresetMenuItem("Foto 8R (20.3 x 25.4 cm / 8 x 10 in)", "8R");
+            AddPresetMenuItem("Foto 10R (25.4 x 30.5 cm / 10 x 12 in)", "10R");
+
+            contextMenuPhotoPresets.Items.Add(new ToolStripSeparator());
+
+            // Kategori 3: Kartu Identitas
+            var headerKartu = new ToolStripMenuItem("--- KARTU IDENTITAS ---") { Enabled = false };
+            headerKartu.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            contextMenuPhotoPresets.Items.Add(headerKartu);
+
+            AddPresetMenuItem("Ukuran KTP / SIM (85.6 x 54 mm)", "KTP");
+        }
+
+        private void AddPresetMenuItem(string label, string presetCode)
+        {
+            var item = new ToolStripMenuItem(label);
+            item.Tag = presetCode;
+            item.Click += (s, e) =>
+            {
+                if (s is ToolStripMenuItem mi && mi.Tag is string code)
+                {
+                    ApplyPhotoPreset(code, mi.Text);
+                }
+            };
+            contextMenuPhotoPresets.Items.Add(item);
+        }
+
+        private void btnPhotoPresets_Click(object sender, EventArgs e)
+        {
+            Image activeImage = _enhancedImage ?? _rawScannedImage;
+            if (activeImage == null)
+            {
+                MessageBox.Show(
+                    "Silakan scan dokumen atau upload gambar terlebih dahulu sebelum memilih ukuran foto.",
+                    "Pemberitahuan",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (contextMenuPhotoPresets != null && btnPhotoPresets != null)
+            {
+                contextMenuPhotoPresets.Show(btnPhotoPresets, new Point(0, btnPhotoPresets.Height));
+            }
+        }
+
+        private void ApplyPhotoPreset(string presetCode, string presetLabel)
+        {
+            Image activeImage = _enhancedImage ?? _rawScannedImage;
+            if (activeImage == null) return;
+
+            try
+            {
+                // Jika pengguna sedang membuat seleksi kotak bebas di layar, potong area seleksi tersebut dahulu
+                if (_selectionRect.Width > 10 && _selectionRect.Height > 10)
+                {
+                    Rectangle imgCropRect = GetImageCoordinatesFromPictureBox(_selectionRect, activeImage);
+                    if (imgCropRect.Width > 10 && imgCropRect.Height > 10)
+                    {
+                        var userSelected = ImageEnhanceService.CropByRectangle(activeImage, imgCropRect);
+                        activeImage = userSelected;
+                    }
+                    _selectionRect = Rectangle.Empty;
+                    btnCropSelection.Enabled = false;
+                }
+
+                PushUndoState(_enhancedImage ?? _rawScannedImage);
+
+                // Potong dan sesuaikan ke preset ukuran
+                Bitmap formatted = ImageEnhanceService.CropToPresetSize(activeImage, presetCode, 300);
+                if (formatted != null)
+                {
+                    _enhancedImage?.Dispose();
+                    _enhancedImage = formatted;
+
+                    // Nonaktifkan 'fit to page' dan pastikan skala 100% agar ukuran fisik preset presisi 1:1 di layar & cetak
+                    chkFitPage.Checked = false;
+                    numScale.Value = 100;
+
+                    btnResetCrop.Enabled = true;
+                    UpdatePreviewDisplay();
+                    UpdateStatus($"Objek gambar berhasil diatur ke ukuran {presetLabel} ({formatted.Width} x {formatted.Height} px 300 DPI).");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Gagal mengatur ukuran preset: {ex.Message}", "Error Preset", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ==========================================
@@ -1211,7 +1549,7 @@ namespace Fotocopy
             btnSaveSettings.Enabled = !isBusy;
             cbScanner.Enabled = !isBusy;
             cbPrinter.Enabled = !isBusy;
-            cbItemsPerSheet.Enabled = !isBusy;
+            numItemsPerSheet.Enabled = !isBusy;
             chkCleanDarkBg.Enabled = !isBusy;
             chkAutoCrop.Enabled = !isBusy;
         }

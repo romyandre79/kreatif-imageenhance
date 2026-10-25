@@ -39,7 +39,7 @@ namespace Fotocopy
             this.lblCopies = new System.Windows.Forms.Label();
             this.numCopies = new System.Windows.Forms.NumericUpDown();
             this.lblItemsPerSheet = new System.Windows.Forms.Label();
-            this.cbItemsPerSheet = new System.Windows.Forms.ComboBox();
+            this.numItemsPerSheet = new System.Windows.Forms.NumericUpDown();
             this.chkFitPage = new System.Windows.Forms.CheckBox();
             this.chkShowScannerUI = new System.Windows.Forms.CheckBox();
             this.chkCleanDarkBg = new System.Windows.Forms.CheckBox();
@@ -61,13 +61,13 @@ namespace Fotocopy
             this.gbPreview = new System.Windows.Forms.GroupBox();
             this.pnlCropToolbar = new System.Windows.Forms.Panel();
             this.btnCropSelection = new System.Windows.Forms.Button();
+            this.btnPhotoPresets = new System.Windows.Forms.Button();
+            this.contextMenuPhotoPresets = new System.Windows.Forms.ContextMenuStrip();
             this.btnResetCrop = new System.Windows.Forms.Button();
+            this.btnAutoEnhance = new System.Windows.Forms.Button();
+            this.btnAdjustments = new System.Windows.Forms.Button();
             this.btnUndo = new System.Windows.Forms.Button();
             this.btnRedo = new System.Windows.Forms.Button();
-            this.btnZoomOut = new System.Windows.Forms.Button();
-            this.btnZoomIn = new System.Windows.Forms.Button();
-            this.numZoom = new System.Windows.Forms.NumericUpDown();
-            this.lblZoom = new System.Windows.Forms.Label();
             this.picPreview = new System.Windows.Forms.PictureBox();
             this.btnUploadImage = new System.Windows.Forms.Button();
             this.btnChangeBg = new System.Windows.Forms.Button();
@@ -82,6 +82,7 @@ namespace Fotocopy
             this.menuAboutInfo = new System.Windows.Forms.ToolStripMenuItem();
             this.gbSettings.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numCopies)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numItemsPerSheet)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginTop)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginBottom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginLeft)).BeginInit();
@@ -89,7 +90,6 @@ namespace Fotocopy
             ((System.ComponentModel.ISupportInitialize)(this.numScale)).BeginInit();
             this.gbPreview.SuspendLayout();
             this.pnlCropToolbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numZoom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picPreview)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -114,7 +114,7 @@ namespace Fotocopy
             this.gbSettings.Controls.Add(this.chkCleanDarkBg);
             this.gbSettings.Controls.Add(this.chkShowScannerUI);
             this.gbSettings.Controls.Add(this.chkFitPage);
-            this.gbSettings.Controls.Add(this.cbItemsPerSheet);
+            this.gbSettings.Controls.Add(this.numItemsPerSheet);
             this.gbSettings.Controls.Add(this.lblItemsPerSheet);
             this.gbSettings.Controls.Add(this.numCopies);
             this.gbSettings.Controls.Add(this.lblCopies);
@@ -241,22 +241,17 @@ namespace Fotocopy
             this.lblItemsPerSheet.TabIndex = 9;
             this.lblItemsPerSheet.Text = "Ganda Gambar per Kertas :";
             // 
-            // cbItemsPerSheet
             // 
-            this.cbItemsPerSheet.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbItemsPerSheet.FormattingEnabled = true;
-            this.cbItemsPerSheet.Items.AddRange(new object[] {
-            "1 Gambar (Ukuran Penuh)",
-            "2 Gambar (Sejajar Samping)",
-            "3 Gambar (2 Samping + 1 Bawah)",
-            "4 Gambar (2x2 Sejajar)",
-            "6 Gambar (2x3 Sejajar)",
-            "8 Gambar (2x4 Sejajar)"});
-            this.cbItemsPerSheet.Location = new System.Drawing.Point(20, 242);
-            this.cbItemsPerSheet.Name = "cbItemsPerSheet";
-            this.cbItemsPerSheet.Size = new System.Drawing.Size(308, 28);
-            this.cbItemsPerSheet.TabIndex = 10;
-            this.cbItemsPerSheet.SelectedIndexChanged += new System.EventHandler(this.cbItemsPerSheet_SelectedIndexChanged);
+            // numItemsPerSheet
+            // 
+            this.numItemsPerSheet.Location = new System.Drawing.Point(220, 218);
+            this.numItemsPerSheet.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            this.numItemsPerSheet.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numItemsPerSheet.Name = "numItemsPerSheet";
+            this.numItemsPerSheet.Size = new System.Drawing.Size(108, 27);
+            this.numItemsPerSheet.TabIndex = 10;
+            this.numItemsPerSheet.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            this.numItemsPerSheet.ValueChanged += new System.EventHandler(this.numItemsPerSheet_ValueChanged);
             // 
             // chkFitPage
             // 
@@ -471,9 +466,11 @@ namespace Fotocopy
             // 
             // pnlCropToolbar
             // 
+            this.pnlCropToolbar.Controls.Add(this.btnAdjustments);
             this.pnlCropToolbar.Controls.Add(this.btnRedo);
             this.pnlCropToolbar.Controls.Add(this.btnUndo);
             this.pnlCropToolbar.Controls.Add(this.btnResetCrop);
+            this.pnlCropToolbar.Controls.Add(this.btnPhotoPresets);
             this.pnlCropToolbar.Controls.Add(this.btnCropSelection);
             this.pnlCropToolbar.Dock = System.Windows.Forms.DockStyle.Top;
             this.pnlCropToolbar.Location = new System.Drawing.Point(3, 23);
@@ -481,18 +478,39 @@ namespace Fotocopy
             this.pnlCropToolbar.Size = new System.Drawing.Size(454, 38);
             this.pnlCropToolbar.TabIndex = 1;
             // 
+            // btnPhotoPresets
+            // 
+            this.btnPhotoPresets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(238)))), ((int)(((byte)(242)))), ((int)(((byte)(255)))));
+            this.btnPhotoPresets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPhotoPresets.Font = new System.Drawing.Font("Segoe UI Semibold", 8.5F, System.Drawing.FontStyle.Bold);
+            this.btnPhotoPresets.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(67)))), ((int)(((byte)(56)))), ((int)(((byte)(202)))));
+            this.btnPhotoPresets.Location = new System.Drawing.Point(82, 3);
+            this.btnPhotoPresets.Name = "btnPhotoPresets";
+            this.btnPhotoPresets.Size = new System.Drawing.Size(110, 32);
+            this.btnPhotoPresets.TabIndex = 1;
+            this.btnPhotoPresets.Text = "📐 Ukuran Foto ▾";
+            this.btnPhotoPresets.UseVisualStyleBackColor = false;
+            this.btnPhotoPresets.Click += new System.EventHandler(this.btnPhotoPresets_Click);
+            // 
+            // contextMenuPhotoPresets
+            // 
+            this.contextMenuPhotoPresets.ImageScalingSize = new System.Drawing.Size(20, 20);
+            this.contextMenuPhotoPresets.Name = "contextMenuPhotoPresets";
+            this.contextMenuPhotoPresets.Size = new System.Drawing.Size(210, 320);
+            // 
+            // 
             // btnCropSelection
             // 
             this.btnCropSelection.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(253)))), ((int)(((byte)(244)))));
             this.btnCropSelection.Enabled = false;
             this.btnCropSelection.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnCropSelection.Font = new System.Drawing.Font("Segoe UI Semibold", 8.5F, System.Drawing.FontStyle.Bold);
+            this.btnCropSelection.Font = new System.Drawing.Font("Segoe UI Semibold", 8.25F, System.Drawing.FontStyle.Bold);
             this.btnCropSelection.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(22)))), ((int)(((byte)(101)))), ((int)(((byte)(52)))));
-            this.btnCropSelection.Location = new System.Drawing.Point(4, 3);
+            this.btnCropSelection.Location = new System.Drawing.Point(3, 3);
             this.btnCropSelection.Name = "btnCropSelection";
-            this.btnCropSelection.Size = new System.Drawing.Size(155, 32);
+            this.btnCropSelection.Size = new System.Drawing.Size(76, 32);
             this.btnCropSelection.TabIndex = 0;
-            this.btnCropSelection.Text = "✂️ Potong Area";
+            this.btnCropSelection.Text = "✂️ Potong";
             this.btnCropSelection.UseVisualStyleBackColor = false;
             this.btnCropSelection.Click += new System.EventHandler(this.btnCropSelection_Click);
             // 
@@ -501,13 +519,13 @@ namespace Fotocopy
             this.btnResetCrop.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(248)))), ((int)(((byte)(250)))), ((int)(((byte)(252)))));
             this.btnResetCrop.Enabled = false;
             this.btnResetCrop.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnResetCrop.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.btnResetCrop.Font = new System.Drawing.Font("Segoe UI", 8.25F);
             this.btnResetCrop.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(71)))), ((int)(((byte)(85)))), ((int)(((byte)(105)))));
-            this.btnResetCrop.Location = new System.Drawing.Point(164, 3);
+            this.btnResetCrop.Location = new System.Drawing.Point(195, 3);
             this.btnResetCrop.Name = "btnResetCrop";
-            this.btnResetCrop.Size = new System.Drawing.Size(95, 32);
-            this.btnResetCrop.TabIndex = 1;
-            this.btnResetCrop.Text = "↺ Reset Asli";
+            this.btnResetCrop.Size = new System.Drawing.Size(62, 32);
+            this.btnResetCrop.TabIndex = 2;
+            this.btnResetCrop.Text = "↺ Reset";
             this.btnResetCrop.UseVisualStyleBackColor = false;
             this.btnResetCrop.Click += new System.EventHandler(this.btnResetCrop_Click);
             // 
@@ -518,11 +536,11 @@ namespace Fotocopy
             this.btnUndo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnUndo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnUndo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(65)))), ((int)(((byte)(85)))));
-            this.btnUndo.Location = new System.Drawing.Point(265, 3);
+            this.btnUndo.Location = new System.Drawing.Point(260, 3);
             this.btnUndo.Name = "btnUndo";
-            this.btnUndo.Size = new System.Drawing.Size(88, 32);
-            this.btnUndo.TabIndex = 2;
-            this.btnUndo.Text = "↶ Undo";
+            this.btnUndo.Size = new System.Drawing.Size(30, 32);
+            this.btnUndo.TabIndex = 3;
+            this.btnUndo.Text = "↶";
             this.btnUndo.UseVisualStyleBackColor = false;
             this.btnUndo.Click += new System.EventHandler(this.btnUndo_Click);
             // 
@@ -533,60 +551,28 @@ namespace Fotocopy
             this.btnRedo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnRedo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnRedo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(51)))), ((int)(((byte)(65)))), ((int)(((byte)(85)))));
-            this.btnRedo.Location = new System.Drawing.Point(358, 3);
+            this.btnRedo.Location = new System.Drawing.Point(293, 3);
             this.btnRedo.Name = "btnRedo";
-            this.btnRedo.Size = new System.Drawing.Size(88, 32);
-            this.btnRedo.TabIndex = 3;
-            this.btnRedo.Text = "↷ Redo";
+            this.btnRedo.Size = new System.Drawing.Size(30, 32);
+            this.btnRedo.TabIndex = 4;
+            this.btnRedo.Text = "↷";
             this.btnRedo.UseVisualStyleBackColor = false;
             this.btnRedo.Click += new System.EventHandler(this.btnRedo_Click);
             // 
-            // btnZoomOut
             // 
-            this.btnZoomOut.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(241)))), ((int)(((byte)(245)))), ((int)(((byte)(249)))));
-            this.btnZoomOut.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnZoomOut.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnZoomOut.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(41)))), ((int)(((byte)(59)))));
-            this.btnZoomOut.Location = new System.Drawing.Point(452, 3);
-            this.btnZoomOut.Name = "btnZoomOut";
-            this.btnZoomOut.Size = new System.Drawing.Size(32, 32);
-            this.btnZoomOut.TabIndex = 4;
-            this.btnZoomOut.Text = "➖";
-            this.btnZoomOut.UseVisualStyleBackColor = false;
-            this.btnZoomOut.Click += new System.EventHandler(this.btnZoomOut_Click);
+            // btnAdjustments
             // 
-            // numZoom
-            // 
-            this.numZoom.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.numZoom.Location = new System.Drawing.Point(488, 5);
-            this.numZoom.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
-            this.numZoom.Minimum = new decimal(new int[] { 25, 0, 0, 0 });
-            this.numZoom.Name = "numZoom";
-            this.numZoom.Size = new System.Drawing.Size(60, 27);
-            this.numZoom.TabIndex = 5;
-            this.numZoom.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.numZoom.Value = new decimal(new int[] { 100, 0, 0, 0 });
-            this.numZoom.ValueChanged += new System.EventHandler(this.numZoom_ValueChanged);
-            // 
-            // btnZoomIn
-            // 
-            this.btnZoomIn.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(241)))), ((int)(((byte)(245)))), ((int)(((byte)(249)))));
-            this.btnZoomIn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnZoomIn.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnZoomIn.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(41)))), ((int)(((byte)(59)))));
-            this.btnZoomIn.Location = new System.Drawing.Point(552, 3);
-            this.btnZoomIn.Name = "btnZoomIn";
-            this.btnZoomIn.Size = new System.Drawing.Size(32, 32);
-            this.btnZoomIn.TabIndex = 6;
-            this.btnZoomIn.Text = "➕";
-            this.btnZoomIn.UseVisualStyleBackColor = false;
-            this.btnZoomIn.Click += new System.EventHandler(this.btnZoomIn_Click);
-            // 
-            // pnlCropToolbar setup addition
-            // 
-            this.pnlCropToolbar.Controls.Add(this.btnZoomIn);
-            this.pnlCropToolbar.Controls.Add(this.numZoom);
-            this.pnlCropToolbar.Controls.Add(this.btnZoomOut);
+            this.btnAdjustments.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(244)))), ((int)(((byte)(248)))));
+            this.btnAdjustments.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnAdjustments.Font = new System.Drawing.Font("Segoe UI Semibold", 8.25F, System.Drawing.FontStyle.Bold);
+            this.btnAdjustments.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(41)))), ((int)(((byte)(59)))));
+            this.btnAdjustments.Location = new System.Drawing.Point(326, 3);
+            this.btnAdjustments.Name = "btnAdjustments";
+            this.btnAdjustments.Size = new System.Drawing.Size(125, 32);
+            this.btnAdjustments.TabIndex = 5;
+            this.btnAdjustments.Text = "🎛️ Edit & Jernihkan";
+            this.btnAdjustments.UseVisualStyleBackColor = false;
+            this.btnAdjustments.Click += new System.EventHandler(this.btnAdjustments_Click);
             // 
             // picPreview
             // 
@@ -746,6 +732,7 @@ namespace Fotocopy
             this.gbSettings.ResumeLayout(false);
             this.gbSettings.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numCopies)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numItemsPerSheet)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginTop)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginBottom)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginLeft)).EndInit();
@@ -775,7 +762,7 @@ namespace Fotocopy
         private System.Windows.Forms.Label lblCopies;
         private System.Windows.Forms.NumericUpDown numCopies;
         private System.Windows.Forms.Label lblItemsPerSheet;
-        private System.Windows.Forms.ComboBox cbItemsPerSheet;
+        private System.Windows.Forms.NumericUpDown numItemsPerSheet;
         private System.Windows.Forms.CheckBox chkFitPage;
         private System.Windows.Forms.Label lblScale;
         private System.Windows.Forms.NumericUpDown numScale;
@@ -797,13 +784,13 @@ namespace Fotocopy
         private System.Windows.Forms.GroupBox gbPreview;
         private System.Windows.Forms.Panel pnlCropToolbar;
         private System.Windows.Forms.Button btnCropSelection;
+        private System.Windows.Forms.Button btnPhotoPresets;
+        private System.Windows.Forms.ContextMenuStrip contextMenuPhotoPresets;
         private System.Windows.Forms.Button btnResetCrop;
         private System.Windows.Forms.Button btnUndo;
         private System.Windows.Forms.Button btnRedo;
-        private System.Windows.Forms.Button btnZoomOut;
-        private System.Windows.Forms.NumericUpDown numZoom;
-        private System.Windows.Forms.Button btnZoomIn;
-        private System.Windows.Forms.Label lblZoom;
+        private System.Windows.Forms.Button btnAutoEnhance;
+        private System.Windows.Forms.Button btnAdjustments;
         private System.Windows.Forms.PictureBox picPreview;
         private System.Windows.Forms.Button btnUploadImage;
         private System.Windows.Forms.Button btnScanPreview;

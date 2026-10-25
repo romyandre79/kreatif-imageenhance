@@ -300,6 +300,7 @@ namespace Fotocopy.Desktop
                 imgPreview.Source = new Bitmap(stream);
                 txtPlaceholder.IsVisible = false;
                 btnCropSelection.IsEnabled = true;
+                btnPhotoPresets.IsEnabled = true;
                 btnResetCrop.IsEnabled = !string.IsNullOrEmpty(_rawScannedPath);
                 txtStatus.Text = $"Gambar dimuat: {Path.GetFileName(filePath)}";
             }
@@ -575,6 +576,58 @@ namespace Fotocopy.Desktop
         {
             if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath)) return;
             txtStatus.Text = "Area telah dipilih. Gunakan mouse untuk menentukan area potong.";
+        }
+
+        private async void OnPhotoPresetClick(object? sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem mi || mi.Tag is not string presetCode) return;
+            if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath)) return;
+
+            string label = mi.Header?.ToString() ?? presetCode;
+            txtStatus.Text = $"Memproses ukuran objek ke {label}...";
+            btnPhotoPresets.IsEnabled = false;
+
+            try
+            {
+                string outputPath = Path.Combine(Path.GetTempPath(), $"preset_{presetCode}_{Guid.NewGuid():N}.png");
+                string inputPath = _currentImagePath;
+
+                string scriptPath = Path.Combine(AppContext.BaseDirectory, "change_bg.py");
+                if (!File.Exists(scriptPath))
+                {
+                    scriptPath = @"c:\lara\www\Fotocopy\change_bg.py";
+                }
+
+                await Task.Run(() =>
+                {
+                    string pythonCmd = OperatingSystem.IsWindows() ? "python" : "python3";
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = pythonCmd,
+                        Arguments = $"\"{scriptPath}\" --preset {presetCode} \"{inputPath}\" \"{outputPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using var proc = Process.Start(psi);
+                    proc?.WaitForExit(30000);
+                });
+
+                if (File.Exists(outputPath))
+                {
+                    PushUndoState(inputPath);
+                    LoadImageToPreview(outputPath);
+                    txtStatus.Text = $"Objek gambar berhasil diatur ke ukuran {label}.";
+                }
+            }
+            catch (Exception ex)
+            {
+                txtStatus.Text = $"Gagal mengatur ukuran preset: {ex.Message}";
+            }
+            finally
+            {
+                btnPhotoPresets.IsEnabled = true;
+            }
         }
 
         private void btnResetCrop_Click(object? sender, RoutedEventArgs e)

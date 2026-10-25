@@ -243,6 +243,18 @@ namespace Fotocopy
 
                 float scaleMultiplier = Math.Max(0.1f, Math.Min(3.0f, scalePercent / 100f));
 
+                // Hitung DPI kanvas sebenarnya dari lebar kertas (standar A4 210mm)
+                // targetWidth 2480 = 300 DPI, targetWidth 1240 = 150 DPI
+                float canvasDpi = (float)targetWidth / (210f / 25.4f);
+                float srcDpiX = sourceImage.HorizontalResolution > 0 ? sourceImage.HorizontalResolution : 300f;
+                float srcDpiY = sourceImage.VerticalResolution > 0 ? sourceImage.VerticalResolution : 300f;
+                float dpiRatioX = canvasDpi / srcDpiX;
+                float dpiRatioY = canvasDpi / srcDpiY;
+
+                // Ukuran fisik objek 1:1 sesuai resolusi asli (WYSIWYG)
+                int naturalW = (int)Math.Round(sourceImage.Width * dpiRatioX * scaleMultiplier);
+                int naturalH = (int)Math.Round(sourceImage.Height * dpiRatioY * scaleMultiplier);
+
                 if (countPerSheet <= 1)
                 {
                     // 1 Gambar: Gambar di dalam batas margin, mulai dari margin Atas (Top)
@@ -276,66 +288,101 @@ namespace Fotocopy
                     }
                     else
                     {
-                        // Jika tidak fit (100% ukuran asli tanpa diperbesar ke batas halaman):
-                        // Gambar dirender dengan skala fisik 1:1 sesuai resolusi target kanvas
-                        // (pada 300 DPI targetWidth ~2480, pada preview 150 DPI targetWidth ~1240).
-                        float srcDpiX = sourceImage.HorizontalResolution > 0 ? sourceImage.HorizontalResolution : 300f;
-                        float srcDpiY = sourceImage.VerticalResolution > 0 ? sourceImage.VerticalResolution : 300f;
-
-                        // Konversi ukuran pixel gambar scan ke pixel target kanvas
-                        float canvasDpi = (float)targetWidth / (210f / 25.4f); // estimasi DPI kanvas dari lebar kertas
-                        float dpiRatioX = canvasDpi / srcDpiX;
-                        float dpiRatioY = canvasDpi / srcDpiY;
-
-                        int origW = (int)Math.Round(sourceImage.Width * dpiRatioX * scaleMultiplier);
-                        int origH = (int)Math.Round(sourceImage.Height * dpiRatioY * scaleMultiplier);
-
-                        g.DrawImage(sourceImage, marginLeft, marginTop, origW, origH);
+                        // WYSIWYG Ukuran Apa Adanya / Preset Fisik:
+                        // Gambar dirender dengan skala fisik 1:1 di layar & printer sama persis
+                        g.DrawImage(sourceImage, marginLeft, marginTop, naturalW, naturalH);
                     }
 
                     return canvas;
                 }
 
-                // Ganda Gambar: Multi-copy (KTP / kartu / dokumen sejajar)
-                // Jarak rapat (compact gap) antar objek agar hemat kertas (sekitar 4-6 mm)
+                // Ganda Gambar: Multi-copy (KTP / kartu / pas foto / dokumen sejajar)
+                // Jarak rapat (compact gap) antar objek agar hemat kertas (sekitar 3-4 mm)
                 float scaleFactor = (float)targetWidth / 2480f;
-                int gapX = Math.Max(8, (int)Math.Round(25 * scaleFactor)); // ~3-4 mm rapat
-                int gapY = Math.Max(8, (int)Math.Round(25 * scaleFactor)); // ~3-4 mm rapat
+                int gapX = Math.Max(6, (int)Math.Round(25 * scaleFactor));
+                int gapY = Math.Max(6, (int)Math.Round(25 * scaleFactor));
 
                 float aspect = (float)sourceImage.Width / Math.Max(1, sourceImage.Height);
 
-                // Jika rasio lebar (> 2.0 seperti 2 KTP sejajar hasil crop), 1 item per baris
-                // Jika rasio normal KTP (~1.4 - 1.8), 2 kolom per baris
-                int maxColsPerRow = 2;
-                if (aspect > 2.2f)
+                // Tentukan jumlah kolom dan baris yang optimal
+                int cols, rows;
+                if (countPerSheet <= 2)
                 {
-                    maxColsPerRow = 1;
+                    if (aspect > 2.2f) { cols = 1; rows = countPerSheet; }
+                    else { cols = countPerSheet; rows = 1; }
+                }
+                else if (countPerSheet == 3)
+                {
+                    cols = 3; rows = 1;
+                    if (aspect < 0.8f && (printableW / 3 < 100)) { cols = 2; rows = 2; }
+                }
+                else if (countPerSheet == 4)
+                {
+                    cols = 2; rows = 2;
+                }
+                else if (countPerSheet == 6)
+                {
+                    cols = aspect < 0.9f ? 3 : 2;
+                    rows = (int)Math.Ceiling(6.0 / cols);
+                }
+                else if (countPerSheet == 8)
+                {
+                    cols = aspect < 0.9f ? 4 : 2;
+                    rows = (int)Math.Ceiling(8.0 / cols);
+                }
+                else if (countPerSheet == 9)
+                {
+                    cols = 3; rows = 3;
+                }
+                else if (countPerSheet <= 12)
+                {
+                    cols = aspect < 0.9f ? 4 : 3;
+                    rows = (int)Math.Ceiling((double)countPerSheet / cols);
+                }
+                else if (countPerSheet <= 16)
+                {
+                    cols = 4; rows = 4;
+                }
+                else
+                {
+                    cols = (int)Math.Ceiling(Math.Sqrt(countPerSheet));
+                    rows = (int)Math.Ceiling((double)countPerSheet / cols);
                 }
 
-                int cols = Math.Min(countPerSheet, maxColsPerRow);
-                int rows = (int)Math.Ceiling((double)countPerSheet / cols);
+                int itemW, itemH;
 
-                // Lebar maksimal yang tersedia per kolom
-                int cellW = (printableW - ((cols - 1) * gapX)) / cols;
-
-                // Batasi tinggi per baris agar muat di printable area
-                int maxAvailableH = (printableH - ((rows - 1) * gapY)) / rows;
-
-                // Hitung dimensi item proporsional
-                int itemW = cellW;
-                int itemH = (int)Math.Round(itemW / aspect);
-
-                if (itemH > maxAvailableH)
+                if (!fitToPage)
                 {
-                    itemH = maxAvailableH;
-                    itemW = (int)Math.Round(itemH * aspect);
+                    // WYSIWYG: Pertahankan ukuran fisik asli 1:1 objek foto / scan
+                    itemW = naturalW;
+                    itemH = naturalH;
+
+                    // Mengalir ke samping sebanyak mungkin hingga tidak muat lebar kertas (flow horizontally first)
+                    int maxColsPossible = Math.Max(1, (printableW + gapX) / (itemW + gapX));
+                    cols = Math.Min(countPerSheet, maxColsPossible);
+                    rows = (int)Math.Ceiling((double)countPerSheet / cols);
                 }
-
-                // Terapkan scale multiplier jika diatur selain 100%
-                if (scalePercent != 100)
+                else
                 {
-                    itemW = (int)Math.Round(itemW * scaleMultiplier);
-                    itemH = (int)Math.Round(itemH * scaleMultiplier);
+                    // Fit to page: Jika gambar relatif kecil dibanding lebar kertas, atau diatur flow kesamping
+                    // Tentukan kolom default berdasarkan proporsi aspek dan lebar kertas
+                    int cellW = (printableW - ((cols - 1) * gapX)) / cols;
+                    int maxAvailableH = (printableH - ((rows - 1) * gapY)) / rows;
+
+                    itemW = cellW;
+                    itemH = (int)Math.Round(itemW / aspect);
+
+                    if (itemH > maxAvailableH)
+                    {
+                        itemH = maxAvailableH;
+                        itemW = (int)Math.Round(itemH * aspect);
+                    }
+
+                    if (scalePercent != 100)
+                    {
+                        itemW = (int)Math.Round(itemW * scaleMultiplier);
+                        itemH = (int)Math.Round(itemH * scaleMultiplier);
+                    }
                 }
 
                 // Render setiap baris rapat dimulai dari Margin Atas (marginTop)
