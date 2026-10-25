@@ -120,7 +120,9 @@ namespace Fotocopy
             int marginBottomMm = 10,
             int marginLeftMm = 10,
             int marginRightMm = 10,
-            int scalePercent = 100)
+            int scalePercent = 100,
+            int gapXMm = 3,
+            int gapYMm = 3)
         {
             if (image == null) throw new ArgumentNullException(nameof(image));
 
@@ -144,7 +146,9 @@ namespace Fotocopy
                         (int)Math.Round((marginRightMm / 25.4f) * 300),
                         fitToPage,
                         false,
-                        scalePercent);
+                        scalePercent,
+                        gapXMm,
+                        gapYMm);
                     toPrint = generatedCanvas;
                 }
 

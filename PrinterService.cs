@@ -210,7 +210,9 @@ namespace Fotocopy
             int marginRight = 100,
             bool fitToPage = true,
             bool drawMarginGuides = false,
-            int scalePercent = 100)
+            int scalePercent = 100,
+            int gapXMm = 3,
+            int gapYMm = 3)
         {
             if (sourceImage == null) throw new ArgumentNullException(nameof(sourceImage));
 
@@ -297,10 +299,9 @@ namespace Fotocopy
                 }
 
                 // Ganda Gambar: Multi-copy (KTP / kartu / pas foto / dokumen sejajar)
-                // Jarak rapat (compact gap) antar objek agar hemat kertas (sekitar 3-4 mm)
-                float scaleFactor = (float)targetWidth / 2480f;
-                int gapX = Math.Max(6, (int)Math.Round(25 * scaleFactor));
-                int gapY = Math.Max(6, (int)Math.Round(25 * scaleFactor));
+                // Jarak antar foto (kolom) dan jarak antar baris dihitung dari milimeter (mm) ke pixel kanvas
+                int gapX = Math.Max(0, (int)Math.Round(((float)gapXMm / 25.4f) * canvasDpi));
+                int gapY = Math.Max(0, (int)Math.Round(((float)gapYMm / 25.4f) * canvasDpi));
 
                 float aspect = (float)sourceImage.Width / Math.Max(1, sourceImage.Height);
 
@@ -412,7 +413,9 @@ namespace Fotocopy
             int marginBottomMm = 10,
             int marginLeftMm = 10,
             int marginRightMm = 10,
-            int scalePercent = 100)
+            int scalePercent = 100,
+            int gapXMm = 3,
+            int gapYMm = 3)
         {
             if (image == null) throw new ArgumentNullException(nameof(image));
 
@@ -434,7 +437,9 @@ namespace Fotocopy
                 mRightPx,
                 fitToPage,
                 false,
-                scalePercent);
+                scalePercent,
+                gapXMm,
+                gapYMm);
 
             try
             {

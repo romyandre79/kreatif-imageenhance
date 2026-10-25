@@ -190,5 +190,29 @@ namespace Fotocopy.Properties {
                 this["ImageScale"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int GapX {
+            get {
+                return ((int)(this["GapX"]));
+            }
+            set {
+                this["GapX"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int GapY {
+            get {
+                return ((int)(this["GapY"]));
+            }
+            set {
+                this["GapY"] = value;
+            }
+        }
     }
 }

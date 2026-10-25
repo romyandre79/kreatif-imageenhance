@@ -58,6 +58,10 @@ namespace Fotocopy
             this.btnSaveSettings = new System.Windows.Forms.Button();
             this.lblScale = new System.Windows.Forms.Label();
             this.numScale = new System.Windows.Forms.NumericUpDown();
+            this.lblGapX = new System.Windows.Forms.Label();
+            this.numGapX = new System.Windows.Forms.NumericUpDown();
+            this.lblGapY = new System.Windows.Forms.Label();
+            this.numGapY = new System.Windows.Forms.NumericUpDown();
             this.gbPreview = new System.Windows.Forms.GroupBox();
             this.pnlCropToolbar = new System.Windows.Forms.Panel();
             this.btnCropSelection = new System.Windows.Forms.Button();
@@ -72,6 +76,8 @@ namespace Fotocopy
             this.btnUploadImage = new System.Windows.Forms.Button();
             this.btnChangeBg = new System.Windows.Forms.Button();
             this.colorDialogBg = new System.Windows.Forms.ColorDialog();
+            this.btnExport = new System.Windows.Forms.Button();
+            this.saveFileDialogExport = new System.Windows.Forms.SaveFileDialog();
             this.btnScanPreview = new System.Windows.Forms.Button();
             this.btnScanOnly = new System.Windows.Forms.Button();
             this.btnCopy = new System.Windows.Forms.Button();
@@ -83,6 +89,8 @@ namespace Fotocopy
             this.gbSettings.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numCopies)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numItemsPerSheet)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numGapX)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numGapY)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginTop)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginBottom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginLeft)).BeginInit();
@@ -113,6 +121,10 @@ namespace Fotocopy
             this.gbSettings.Controls.Add(this.chkAutoCrop);
             this.gbSettings.Controls.Add(this.chkCleanDarkBg);
             this.gbSettings.Controls.Add(this.chkShowScannerUI);
+            this.gbSettings.Controls.Add(this.numGapY);
+            this.gbSettings.Controls.Add(this.lblGapY);
+            this.gbSettings.Controls.Add(this.numGapX);
+            this.gbSettings.Controls.Add(this.lblGapX);
             this.gbSettings.Controls.Add(this.chkFitPage);
             this.gbSettings.Controls.Add(this.numItemsPerSheet);
             this.gbSettings.Controls.Add(this.lblItemsPerSheet);
@@ -252,6 +264,44 @@ namespace Fotocopy
             this.numItemsPerSheet.TabIndex = 10;
             this.numItemsPerSheet.Value = new decimal(new int[] { 1, 0, 0, 0 });
             this.numItemsPerSheet.ValueChanged += new System.EventHandler(this.numItemsPerSheet_ValueChanged);
+            // 
+            // lblGapX
+            // 
+            this.lblGapX.AutoSize = true;
+            this.lblGapX.Location = new System.Drawing.Point(16, 252);
+            this.lblGapX.Name = "lblGapX";
+            this.lblGapX.Size = new System.Drawing.Size(107, 20);
+            this.lblGapX.TabIndex = 11;
+            this.lblGapX.Text = "Jarak Foto (mm):";
+            // 
+            // numGapX
+            // 
+            this.numGapX.Location = new System.Drawing.Point(125, 250);
+            this.numGapX.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numGapX.Name = "numGapX";
+            this.numGapX.Size = new System.Drawing.Size(55, 27);
+            this.numGapX.TabIndex = 12;
+            this.numGapX.Value = new decimal(new int[] { 3, 0, 0, 0 });
+            this.numGapX.ValueChanged += new System.EventHandler(this.numGap_ValueChanged);
+            // 
+            // lblGapY
+            // 
+            this.lblGapY.AutoSize = true;
+            this.lblGapY.Location = new System.Drawing.Point(190, 252);
+            this.lblGapY.Name = "lblGapY";
+            this.lblGapY.Size = new System.Drawing.Size(78, 20);
+            this.lblGapY.TabIndex = 13;
+            this.lblGapY.Text = "Baris (mm):";
+            // 
+            // numGapY
+            // 
+            this.numGapY.Location = new System.Drawing.Point(273, 250);
+            this.numGapY.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.numGapY.Name = "numGapY";
+            this.numGapY.Size = new System.Drawing.Size(55, 27);
+            this.numGapY.TabIndex = 14;
+            this.numGapY.Value = new decimal(new int[] { 3, 0, 0, 0 });
+            this.numGapY.ValueChanged += new System.EventHandler(this.numGap_ValueChanged);
             // 
             // chkFitPage
             // 
@@ -592,6 +642,7 @@ namespace Fotocopy
             this.picPreview.Paint += new System.Windows.Forms.PaintEventHandler(this.picPreview_Paint);
             // 
             // 
+            // 
             // btnUploadImage
             // 
             this.btnUploadImage.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(243)))), ((int)(((byte)(232)))), ((int)(((byte)(255)))));
@@ -600,7 +651,7 @@ namespace Fotocopy
             this.btnUploadImage.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(126)))), ((int)(((byte)(34)))), ((int)(((byte)(206)))));
             this.btnUploadImage.Location = new System.Drawing.Point(16, 585);
             this.btnUploadImage.Name = "btnUploadImage";
-            this.btnUploadImage.Size = new System.Drawing.Size(145, 55);
+            this.btnUploadImage.Size = new System.Drawing.Size(125, 55);
             this.btnUploadImage.TabIndex = 2;
             this.btnUploadImage.Text = "📁 Upload Gambar";
             this.btnUploadImage.UseVisualStyleBackColor = false;
@@ -612,9 +663,9 @@ namespace Fotocopy
             this.btnScanPreview.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnScanPreview.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.btnScanPreview.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(2)))), ((int)(((byte)(132)))), ((int)(((byte)(199)))));
-            this.btnScanPreview.Location = new System.Drawing.Point(168, 585);
+            this.btnScanPreview.Location = new System.Drawing.Point(148, 585);
             this.btnScanPreview.Name = "btnScanPreview";
-            this.btnScanPreview.Size = new System.Drawing.Size(145, 55);
+            this.btnScanPreview.Size = new System.Drawing.Size(125, 55);
             this.btnScanPreview.TabIndex = 3;
             this.btnScanPreview.Text = "👁️ Scan Preview";
             this.btnScanPreview.UseVisualStyleBackColor = false;
@@ -626,9 +677,9 @@ namespace Fotocopy
             this.btnScanOnly.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnScanOnly.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.btnScanOnly.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(116)))), ((int)(((byte)(144)))));
-            this.btnScanOnly.Location = new System.Drawing.Point(320, 585);
+            this.btnScanOnly.Location = new System.Drawing.Point(280, 585);
             this.btnScanOnly.Name = "btnScanOnly";
-            this.btnScanOnly.Size = new System.Drawing.Size(145, 55);
+            this.btnScanOnly.Size = new System.Drawing.Size(125, 55);
             this.btnScanOnly.TabIndex = 4;
             this.btnScanOnly.Text = "📄 Scan Dokumen";
             this.btnScanOnly.UseVisualStyleBackColor = false;
@@ -640,13 +691,32 @@ namespace Fotocopy
             this.btnChangeBg.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnChangeBg.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.btnChangeBg.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(185)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
-            this.btnChangeBg.Location = new System.Drawing.Point(472, 585);
+            this.btnChangeBg.Location = new System.Drawing.Point(412, 585);
             this.btnChangeBg.Name = "btnChangeBg";
-            this.btnChangeBg.Size = new System.Drawing.Size(140, 55);
+            this.btnChangeBg.Size = new System.Drawing.Size(125, 55);
             this.btnChangeBg.TabIndex = 5;
             this.btnChangeBg.Text = "🎨 Ganti Warna BG";
             this.btnChangeBg.UseVisualStyleBackColor = false;
             this.btnChangeBg.Click += new System.EventHandler(this.btnChangeBg_Click);
+            // 
+            // btnExport
+            // 
+            this.btnExport.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(253)))), ((int)(((byte)(244)))));
+            this.btnExport.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExport.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
+            this.btnExport.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(22)))), ((int)(((byte)(101)))), ((int)(((byte)(52)))));
+            this.btnExport.Location = new System.Drawing.Point(544, 585);
+            this.btnExport.Name = "btnExport";
+            this.btnExport.Size = new System.Drawing.Size(130, 55);
+            this.btnExport.TabIndex = 6;
+            this.btnExport.Text = "💾 Simpan File\r\n(PNG/JPG/PDF)";
+            this.btnExport.UseVisualStyleBackColor = false;
+            this.btnExport.Click += new System.EventHandler(this.btnExport_Click);
+            // 
+            // saveFileDialogExport
+            // 
+            this.saveFileDialogExport.Filter = "File Gambar PNG (*.png)|*.png|File Gambar JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|Dokumen PDF (*.pdf)|*.pdf";
+            this.saveFileDialogExport.Title = "Simpan Hasil Edit Foto";
             // 
             // btnCopy
             // 
@@ -654,11 +724,11 @@ namespace Fotocopy
             this.btnCopy.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCopy.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.btnCopy.ForeColor = System.Drawing.Color.White;
-            this.btnCopy.Location = new System.Drawing.Point(620, 585);
+            this.btnCopy.Location = new System.Drawing.Point(681, 585);
             this.btnCopy.Name = "btnCopy";
-            this.btnCopy.Size = new System.Drawing.Size(220, 55);
-            this.btnCopy.TabIndex = 6;
-            this.btnCopy.Text = "⚡ CETAK / COPY";
+            this.btnCopy.Size = new System.Drawing.Size(159, 55);
+            this.btnCopy.TabIndex = 7;
+            this.btnCopy.Text = "⚡ CETAK";
             this.btnCopy.UseVisualStyleBackColor = false;
             this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
             // 
@@ -716,6 +786,7 @@ namespace Fotocopy
             this.ClientSize = new System.Drawing.Size(856, 681);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.btnCopy);
+            this.Controls.Add(this.btnExport);
             this.Controls.Add(this.btnChangeBg);
             this.Controls.Add(this.btnScanOnly);
             this.Controls.Add(this.btnScanPreview);
@@ -733,6 +804,8 @@ namespace Fotocopy
             this.gbSettings.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numCopies)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numItemsPerSheet)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numGapX)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numGapY)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginTop)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginBottom)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numMarginLeft)).EndInit();
@@ -763,6 +836,10 @@ namespace Fotocopy
         private System.Windows.Forms.NumericUpDown numCopies;
         private System.Windows.Forms.Label lblItemsPerSheet;
         private System.Windows.Forms.NumericUpDown numItemsPerSheet;
+        private System.Windows.Forms.Label lblGapX;
+        private System.Windows.Forms.NumericUpDown numGapX;
+        private System.Windows.Forms.Label lblGapY;
+        private System.Windows.Forms.NumericUpDown numGapY;
         private System.Windows.Forms.CheckBox chkFitPage;
         private System.Windows.Forms.Label lblScale;
         private System.Windows.Forms.NumericUpDown numScale;
@@ -797,6 +874,8 @@ namespace Fotocopy
         private System.Windows.Forms.Button btnScanOnly;
         private System.Windows.Forms.Button btnChangeBg;
         private System.Windows.Forms.ColorDialog colorDialogBg;
+        private System.Windows.Forms.Button btnExport;
+        private System.Windows.Forms.SaveFileDialog saveFileDialogExport;
         private System.Windows.Forms.Button btnCopy;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel lblStatus;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Fotocopy.Properties;
@@ -201,6 +202,12 @@ namespace Fotocopy
 
                     int savedScale = Settings.Default.ImageScale;
                     numScale.Value = Math.Max(10, Math.Min(300, savedScale > 0 ? savedScale : 100));
+
+                    int gapX = Settings.Default.GapX;
+                    numGapX.Value = Math.Max(0, Math.Min(100, gapX >= 0 ? gapX : 3));
+
+                    int gapY = Settings.Default.GapY;
+                    numGapY.Value = Math.Max(0, Math.Min(100, gapY >= 0 ? gapY : 3));
                 }
             }
             catch (Exception ex)
@@ -387,10 +394,12 @@ namespace Fotocopy
                 Settings.Default.MarginRight = (int)numMarginRight.Value;
                 Settings.Default.ImageScale = (int)numScale.Value;
                 Settings.Default.ItemsPerSheet = GetCurrentItemsPerSheet();
+                Settings.Default.GapX = (int)numGapX.Value;
+                Settings.Default.GapY = (int)numGapY.Value;
                 Settings.Default.Save();
 
                 MessageBox.Show(
-                    "Pengaturan koneksi scanner, printer, ukuran kertas, margin, skala gambar, dan pengganda gambar berhasil disimpan!",
+                    "Pengaturan koneksi scanner, printer, ukuran kertas, margin, skala gambar, jarak antar foto, dan pengganda gambar berhasil disimpan!",
                     "Pengaturan Tersimpan",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -407,6 +416,11 @@ namespace Fotocopy
             UpdatePreviewDisplay();
         }
 
+        private void numGap_ValueChanged(object sender, EventArgs e)
+        {
+            UpdatePreviewDisplay();
+        }
+
         private void cbPaperSize_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdatePreviewDisplay();
@@ -416,7 +430,7 @@ namespace Fotocopy
 
         private void SetupNumericControlSync()
         {
-            NumericUpDown[] controls = new NumericUpDown[] { numMarginTop, numMarginBottom, numMarginLeft, numMarginRight, numScale, numCopies, numItemsPerSheet };
+            NumericUpDown[] controls = new NumericUpDown[] { numMarginTop, numMarginBottom, numMarginLeft, numMarginRight, numScale, numCopies, numItemsPerSheet, numGapX, numGapY };
             foreach (var num in controls)
             {
                 num.InterceptArrowKeys = true;
@@ -552,7 +566,9 @@ namespace Fotocopy
                         mRight,
                         chkFitPage.Checked,
                         true,
-                        scale);
+                        scale,
+                        (int)numGapX.Value,
+                        (int)numGapY.Value);
                 }
                 else
                 {
@@ -1505,13 +1521,109 @@ namespace Fotocopy
                     mBottom,
                     mLeft,
                     mRight,
-                    scale);
+                    scale,
+                    (int)numGapX.Value,
+                    (int)numGapY.Value);
                 UpdateStatus($"Fotokopi selesai dicetak ({copies} lembar, layout {items} gambar ke {selectedPrinter}).");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Terjadi kesalahan saat mencetak: {ex.Message}", "Error Cetak", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 UpdateStatus($"Gagal cetak: {ex.Message}");
+            }
+        }
+
+        private void btnExport_Click(object sender, EventArgs e)
+        {
+            Image activeImage = _enhancedImage ?? _rawScannedImage;
+            if (activeImage == null)
+            {
+                MessageBox.Show("Belum ada gambar yang discan atau diunggah.", "Peringatan", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                saveFileDialogExport.FileName = $"Hasil_Edit_{DateTime.Now:yyyyMMdd_HHmmss}";
+                if (saveFileDialogExport.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string filePath = saveFileDialogExport.FileName;
+                string ext = Path.GetExtension(filePath)?.ToLowerInvariant() ?? "";
+
+                int items = GetCurrentItemsPerSheet();
+                Image imageToExport;
+                bool shouldDispose = false;
+
+                // Jika ganda gambar > 1, simpan seluruh kanvas tata letak lembaran kertas (300 DPI high resolution)
+                if (items > 1)
+                {
+                    string paperName = GetSelectedPaperSizeName();
+                    Size paperPx = PrinterService.GetPaperDimensions(paperName, 300);
+                    int mTop = (int)Math.Round(((float)numMarginTop.Value / 25.4f) * 300);
+                    int mBottom = (int)Math.Round(((float)numMarginBottom.Value / 25.4f) * 300);
+                    int mLeft = (int)Math.Round(((float)numMarginLeft.Value / 25.4f) * 300);
+                    int mRight = (int)Math.Round(((float)numMarginRight.Value / 25.4f) * 300);
+                    int scale = (int)numScale.Value;
+
+                    imageToExport = PrinterService.CreateMultiCopyCanvas(
+                        activeImage,
+                        items,
+                        paperPx.Width,
+                        paperPx.Height,
+                        mTop,
+                        mBottom,
+                        mLeft,
+                        mRight,
+                        chkFitPage.Checked,
+                        false, // jangan gambar border panduan saat simpan file hasil
+                        scale,
+                        (int)numGapX.Value,
+                        (int)numGapY.Value);
+                    shouldDispose = true;
+                }
+                else
+                {
+                    // 1 gambar: simpan foto hasil edit langsung dengan kualitas asli
+                    imageToExport = activeImage;
+                }
+
+                try
+                {
+                    UpdateStatus($"Menyimpan file ke '{Path.GetFileName(filePath)}'...");
+
+                    if (ext == ".pdf")
+                    {
+                        ExportService.SaveAsPdf(imageToExport, filePath);
+                    }
+                    else if (ext == ".jpg" || ext == ".jpeg")
+                    {
+                        ExportService.SaveAsJpg(imageToExport, filePath, 95);
+                    }
+                    else
+                    {
+                        ExportService.SaveAsPng(imageToExport, filePath);
+                    }
+
+                    UpdateStatus($"Berhasil disimpan: {Path.GetFileName(filePath)}");
+                    MessageBox.Show(
+                        $"File berhasil disimpan ke:\n{filePath}",
+                        "Simpan Berhasil",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                finally
+                {
+                    if (shouldDispose)
+                    {
+                        imageToExport.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Gagal menyimpan file: {ex.Message}", "Error Simpan", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UpdateStatus($"Gagal simpan file: {ex.Message}");
             }
         }
 

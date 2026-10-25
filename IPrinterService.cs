@@ -20,6 +20,8 @@ namespace Fotocopy
             int marginBottomMm = 10,
             int marginLeftMm = 10,
             int marginRightMm = 10,
-            int scalePercent = 100);
+            int scalePercent = 100,
+            int gapXMm = 3,
+            int gapYMm = 3);
     }
 }
