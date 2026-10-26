@@ -80,7 +80,11 @@ namespace Fotocopy
 
             if (provider.StartsWith("Pollinations", StringComparison.OrdinalIgnoreCase))
             {
-                return await GeneratePollinationsAsync(prompt, config.ImageModel, width, height);
+                return await GeneratePollinationsAsync(prompt, config.ApiKey, config.ImageModel, width, height);
+            }
+            else if (provider.StartsWith("HuggingFace", StringComparison.OrdinalIgnoreCase))
+            {
+                return await GenerateHuggingFaceAsync(prompt, config.ApiKey, config.ImageModel);
             }
             else if (provider.StartsWith("OpenAI", StringComparison.OrdinalIgnoreCase))
             {
@@ -93,19 +97,58 @@ namespace Fotocopy
             else
             {
                 // Fallback default
-                return await GeneratePollinationsAsync(prompt, "flux", width, height);
+                return await GeneratePollinationsAsync(prompt, config.ApiKey, "flux", width, height);
             }
         }
 
-        private static async Task<byte[]> GeneratePollinationsAsync(string prompt, string model, int width, int height)
+        private static async Task<byte[]> GeneratePollinationsAsync(string prompt, string apiKey, string model, int width, int height)
         {
             string chosenModel = string.IsNullOrWhiteSpace(model) ? "flux" : model.Trim().ToLowerInvariant();
             string encodedPrompt = Uri.EscapeDataString(prompt);
             string url = $"https://image.pollinations.ai/prompt/{encodedPrompt}?width={width}&height={height}&model={chosenModel}&nologo=true&seed={new Random().Next(100000, 999999)}";
 
-            var response = await _httpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync();
+            using (var req = new HttpRequestMessage(HttpMethod.Get, url))
+            {
+                // Jika user memiliki Pollen key / Pollinations Token
+                if (!string.IsNullOrWhiteSpace(apiKey) && apiKey != "(Tidak perlu API Key)")
+                {
+                    req.Headers.Add("Authorization", $"Bearer {apiKey.Trim()}");
+                }
+
+                var response = await _httpClient.SendAsync(req);
+                if (!response.IsSuccessStatusCode)
+                {
+                    string err = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"Pollinations Error ({response.StatusCode}): {err}");
+                }
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+        }
+
+        private static async Task<byte[]> GenerateHuggingFaceAsync(string prompt, string apiKey, string model)
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new InvalidOperationException("Token HuggingFace (Free Access Token dari huggingface.co/settings/tokens) belum diisi.");
+
+            string chosenModel = string.IsNullOrWhiteSpace(model) ? "black-forest-labs/FLUX.1-schnell" : model.Trim();
+            string url = $"https://api-inference.huggingface.co/models/{chosenModel}";
+
+            string jsonBody = "{\"inputs\": \"" + EscapeJson(prompt) + "\"}";
+
+            using (var req = new HttpRequestMessage(HttpMethod.Post, url))
+            {
+                req.Headers.Add("Authorization", $"Bearer {apiKey.Trim()}");
+                req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.SendAsync(req);
+                if (!response.IsSuccessStatusCode)
+                {
+                    string err = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"HuggingFace Error ({response.StatusCode}): {err}");
+                }
+
+                return await response.Content.ReadAsByteArrayAsync();
+            }
         }
 
         private static async Task<byte[]> GenerateOpenAiAsync(string prompt, string apiKey, string model, int width, int height)

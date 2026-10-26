@@ -87,7 +87,8 @@ namespace Fotocopy
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             cbProvider.Items.AddRange(new object[] {
-                "Pollinations.ai (Free - No Key)",
+                "Pollinations.ai (Free - Tanpa Key / Opsional Pollen)",
+                "Hugging Face (Free Token - FLUX.1 / SD)",
                 "OpenAI (DALL-E 3)",
                 "Google Gemini (Imagen 3)"
             });
@@ -95,7 +96,7 @@ namespace Fotocopy
             cbProvider.SelectedIndexChanged += CbProvider_SelectedIndexChanged;
 
             // API Key
-            var lblKey = new Label { Text = "API Key (Diperlukan untuk OpenAI & Google Gemini):", Location = new Point(0, 52), AutoSize = true, Font = new Font("Segoe UI Semibold", 9F) };
+            var lblKey = new Label { Text = "API Key / Access Token (HuggingFace, Pollen, OpenAI, Gemini):", Location = new Point(0, 52), AutoSize = true, Font = new Font("Segoe UI Semibold", 9F) };
             txtApiKey = new TextBox
             {
                 Location = new Point(0, 72),
@@ -349,8 +350,11 @@ namespace Fotocopy
 
             if (selected.StartsWith("Pollinations", StringComparison.OrdinalIgnoreCase))
             {
-                txtApiKey.Enabled = false;
-                txtApiKey.Text = "(Tidak perlu API Key)";
+                txtApiKey.Enabled = true;
+                if (string.IsNullOrWhiteSpace(txtApiKey.Text) || txtApiKey.Text.StartsWith("hf_"))
+                {
+                    txtApiKey.Text = _config.ApiKey ?? "";
+                }
             }
             else
             {
@@ -375,12 +379,37 @@ namespace Fotocopy
             {
                 cbModel.Enabled = true;
                 cbModel.Items.AddRange(new object[] {
-                    "flux (Kualitas Tinggi)",
-                    "turbo (Cepat)",
-                    "midjourney (Artistik)"
+                    "flux (FLUX.1 Schnell)",
+                    "turbo (Turbo Diffusion)",
+                    "midjourney (Artistic)",
+                    "pixart (PixArt Sigma)",
+                    "deliberate (Deliberate V2)"
                 });
 
                 SelectMatchingModel(currentModel ?? _config.ImageModel, 0);
+            }
+            else if (selectedProvider.StartsWith("Hugging", StringComparison.OrdinalIgnoreCase))
+            {
+                string key = txtApiKey.Text.Trim();
+                bool hasKey = !string.IsNullOrWhiteSpace(key) && key != "(Tidak perlu API Key)";
+
+                if (!hasKey)
+                {
+                    cbModel.Items.Add("⚠️ Masukkan HuggingFace Access Token terlebih dahulu (hf_...)");
+                    cbModel.SelectedIndex = 0;
+                    cbModel.Enabled = false;
+                }
+                else
+                {
+                    cbModel.Enabled = true;
+                    cbModel.Items.AddRange(new object[] {
+                        "black-forest-labs/FLUX.1-schnell (FLUX.1 Schnell - Free Tier)",
+                        "stabilityai/stable-diffusion-xl-base-1.0 (SDXL 1.0)",
+                        "runwayml/stable-diffusion-v1-5 (SD 1.5)"
+                    });
+
+                    SelectMatchingModel(currentModel ?? _config.ImageModel, 0);
+                }
             }
             else if (selectedProvider.StartsWith("OpenAI", StringComparison.OrdinalIgnoreCase))
             {
