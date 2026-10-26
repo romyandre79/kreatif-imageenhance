@@ -31,6 +31,41 @@ def change_bg(input_path, output_path, r, g, b):
     except Exception as e:
         print(f"ERROR: {str(e)}")
 
+def change_bg_image(input_path, output_path, bg_image_path):
+    try:
+        # Buka gambar asli
+        img = Image.open(input_path)
+        
+        # Ekstrak objek utama menggunakan AI model u2net
+        nobg = remove(img, session=session, post_process_mask=True)
+        
+        # Buka gambar background baru
+        bg_raw = Image.open(bg_image_path).convert("RGBA")
+        
+        # Sesuaikan ukuran gambar background agar menutupi gambar target (cover fit)
+        target_w, target_h = nobg.size
+        src_w, src_h = bg_raw.size
+        
+        scale = max(target_w / src_w, target_h / src_h)
+        new_w = int(round(src_w * scale))
+        new_h = int(round(src_h * scale))
+        
+        bg_resized = bg_raw.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        
+        # Center-crop background agar presisi sama dengan ukuran objek
+        left = (new_w - target_w) // 2
+        top = (new_h - target_h) // 2
+        bg_cropped = bg_resized.crop((left, top, left + target_w, top + target_h))
+        
+        # Gabungkan objek di atas background gambar baru
+        bg_cropped.paste(nobg, (0, 0), nobg)
+        
+        result = bg_cropped.convert("RGB")
+        result.save(output_path, "PNG")
+        print("SUCCESS")
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+
 PRESET_DIMS = {
     "2x3": (21.6, 27.9),
     "3x4": (27.9, 38.1),
@@ -93,6 +128,12 @@ if __name__ == "__main__":
         in_p = sys.argv[3]
         out_p = sys.argv[4]
         crop_preset(in_p, out_p, p_code)
+    elif len(sys.argv) >= 5 and sys.argv[1] == "--bg-image":
+        # python change_bg.py --bg-image <bg_image_path> <input> <output>
+        bg_img_p = sys.argv[2]
+        in_p = sys.argv[3]
+        out_p = sys.argv[4]
+        change_bg_image(in_p, out_p, bg_img_p)
     elif len(sys.argv) >= 6:
         in_p = sys.argv[1]
         out_p = sys.argv[2]
@@ -102,4 +143,5 @@ if __name__ == "__main__":
         change_bg(in_p, out_p, red, green, blue)
     else:
         print("Usage: change_bg.py <input> <output> <r> <g> <b>")
+        print("   or: change_bg.py --bg-image <bg_image_path> <input> <output>")
         print("   or: change_bg.py --preset <2x3|3x4|4x6|2r|3r|4r|ktp> <input> <output>")

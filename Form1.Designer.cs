@@ -653,7 +653,7 @@ namespace Fotocopy
             this.btnUploadImage.Name = "btnUploadImage";
             this.btnUploadImage.Size = new System.Drawing.Size(125, 55);
             this.btnUploadImage.TabIndex = 2;
-            this.btnUploadImage.Text = "📁 Upload Gambar";
+            this.btnUploadImage.Text = "📁 Upload / AI Foto";
             this.btnUploadImage.UseVisualStyleBackColor = false;
             this.btnUploadImage.Click += new System.EventHandler(this.btnUploadImage_Click);
             // 
@@ -695,7 +695,7 @@ namespace Fotocopy
             this.btnChangeBg.Name = "btnChangeBg";
             this.btnChangeBg.Size = new System.Drawing.Size(125, 55);
             this.btnChangeBg.TabIndex = 5;
-            this.btnChangeBg.Text = "🎨 Ganti Warna BG";
+            this.btnChangeBg.Text = "🎨 Ganti Background";
             this.btnChangeBg.UseVisualStyleBackColor = false;
             this.btnChangeBg.Click += new System.EventHandler(this.btnChangeBg_Click);
             // 

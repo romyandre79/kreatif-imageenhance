@@ -205,12 +205,18 @@
         <!-- 3. Bottom Action Bar (Identik persis dengan tombol Form1 Windows Forms) -->
         <Border Grid.Row="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="16,10">
             <Grid ColumnDefinitions="*, *, *, *, 1.4*">
-                <!-- 1. Upload Gambar -->
+                <!-- 1. Upload Gambar / AI -->
                 <Button x:Name="btnUploadImage" Grid.Column="0" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
-                        Background="#F3E8FF" Foreground="#7E22CE" FontWeight="SemiBold" CornerRadius="8" Click="btnUploadImage_Click">
+                        Background="#F3E8FF" Foreground="#7E22CE" FontWeight="SemiBold" CornerRadius="8">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="Top">
+                            <MenuItem Header="📁 Pilih File dari Komputer (JPG/PNG)..." Click="OnBrowseLocalImageClick" />
+                            <MenuItem Header="✨ Generate Foto AI (Gemini, OpenAI, Pollinations)..." Click="OnGenerateAiPhotoClick" />
+                        </MenuFlyout>
+                    </Button.Flyout>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="📁 Upload Gambar" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
-                        <TextBlock Text="Buka file JPG/PNG" FontSize="10" Foreground="#A855F7" HorizontalAlignment="Center" />
+                        <TextBlock Text="📁 Upload / AI Foto" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
+                        <TextBlock Text="File atau AI Generator" FontSize="10" Foreground="#A855F7" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -232,12 +238,18 @@
                     </StackPanel>
                 </Button>
 
-                <!-- 4. Ganti Warna BG -->
+                <!-- 4. Ganti Background -->
                 <Button x:Name="btnChangeBg" Grid.Column="3" Margin="4,0" HorizontalAlignment="Stretch" Height="50"
-                        Background="#FEF2F2" Foreground="#B91C1C" FontWeight="SemiBold" CornerRadius="8" Click="btnChangeBg_Click">
+                        Background="#FEF2F2" Foreground="#B91C1C" FontWeight="SemiBold" CornerRadius="8">
+                    <Button.Flyout>
+                        <MenuFlyout Placement="Top">
+                            <MenuItem Header="🎨 Ganti Warna Polos (Pasfoto / Solid)..." Click="OnChangeBgColorClick" />
+                            <MenuItem Header="🖼️ Ganti dengan Gambar / Foto Lain..." Click="OnChangeBgImageClick" />
+                        </MenuFlyout>
+                    </Button.Flyout>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="🎨 Ganti Warna BG" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
-                        <TextBlock Text="AI Pasfoto / Dokumen" FontSize="10" Foreground="#EF4444" HorizontalAlignment="Center" />
+                        <TextBlock Text="🎨 Ganti Background" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center" />
+                        <TextBlock Text="AI Warna / Gambar" FontSize="10" Foreground="#EF4444" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Button>
 

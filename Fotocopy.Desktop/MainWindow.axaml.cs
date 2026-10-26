@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
@@ -270,7 +271,7 @@ namespace Fotocopy.Desktop
             // Trigger perubahan setting layout
         }
 
-        private async void btnUploadImage_Click(object? sender, RoutedEventArgs e)
+        private async void OnBrowseLocalImageClick(object? sender, RoutedEventArgs e)
         {
             var topLevel = TopLevel.GetTopLevel(this);
             if (topLevel == null) return;
@@ -289,6 +290,163 @@ namespace Fotocopy.Desktop
                 PushUndoState(localPath);
                 LoadImageToPreview(localPath);
             }
+        }
+
+        private async void OnGenerateAiPhotoClick(object? sender, RoutedEventArgs e)
+        {
+            var config = AiConfig.Load();
+
+            var dialog = new Window
+            {
+                Title = "✨ AI Image Generator (Gemini, OpenAI, Pollinations)",
+                Width = 520,
+                Height = 490,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            var rootBorder = new Border
+            {
+                Background = Avalonia.Media.Brushes.White,
+                Padding = new Thickness(20)
+            };
+
+            var mainPanel = new StackPanel { Spacing = 12 };
+
+            mainPanel.Children.Add(new TextBlock
+            {
+                Text = "✨ AI Generator & Agent",
+                FontSize = 16,
+                FontWeight = Avalonia.Media.FontWeight.Bold,
+                Foreground = Avalonia.Media.Brush.Parse("#4F46E5")
+            });
+
+            var cbProvider = new ComboBox
+            {
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
+            };
+            cbProvider.ItemsSource = new[]
+            {
+                "Pollinations.ai (Free - No Key)",
+                "OpenAI (DALL-E 3)",
+                "Google Gemini (Imagen 3)"
+            };
+            cbProvider.SelectedIndex = 0;
+
+            var txtApiKey = new TextBox
+            {
+                Watermark = "API Key (Opsional jika pakai Pollinations)",
+                PasswordChar = '•',
+                Text = config.ApiKey
+            };
+
+            var txtPrompt = new TextBox
+            {
+                Watermark = "Ketik deskripsi gambar / pasfoto yang ingin dibuat...",
+                AcceptsReturn = true,
+                Height = 110,
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            };
+
+            var lblDialogStatus = new TextBlock
+            {
+                Text = "Pilih provider dan ketik prompt foto Anda.",
+                FontSize = 11,
+                Foreground = Avalonia.Media.Brush.Parse("#64748B"),
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
+            };
+
+            var buttonBar = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                Spacing = 10,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+
+            var btnCancel = new Button
+            {
+                Content = "Batal",
+                Padding = new Thickness(16, 8),
+                Background = Avalonia.Media.Brush.Parse("#F1F5F9"),
+                Foreground = Avalonia.Media.Brush.Parse("#475569"),
+                CornerRadius = new CornerRadius(6)
+            };
+            btnCancel.Click += (s, ev) => dialog.Close();
+
+            var btnGen = new Button
+            {
+                Content = "🚀 Generate & Muat",
+                Padding = new Thickness(20, 8),
+                Background = Avalonia.Media.Brush.Parse("#4F46E5"),
+                Foreground = Avalonia.Media.Brushes.White,
+                FontWeight = Avalonia.Media.FontWeight.Bold,
+                CornerRadius = new CornerRadius(6)
+            };
+
+            btnGen.Click += async (s, ev) =>
+            {
+                string prompt = txtPrompt.Text?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(prompt))
+                {
+                    lblDialogStatus.Text = "⚠️ Prompt tidak boleh kosong.";
+                    lblDialogStatus.Foreground = Avalonia.Media.Brushes.Red;
+                    return;
+                }
+
+                config.Provider = cbProvider.SelectedItem?.ToString() ?? "Pollinations.ai (Free - No Key)";
+                config.ApiKey = txtApiKey.Text?.Trim() ?? "";
+                config.Save();
+
+                btnGen.IsEnabled = false;
+                lblDialogStatus.Text = "⏳ Menghubungi AI Agent untuk membuat foto...";
+                lblDialogStatus.Foreground = Avalonia.Media.Brush.Parse("#4F46E5");
+
+                try
+                {
+                    byte[] bytes = await Task.Run(() => AiAgentService.GenerateImageAsync(prompt, config));
+                    string tempOut = Path.Combine(Path.GetTempPath(), $"ai_gen_{Guid.NewGuid():N}.png");
+                    await File.WriteAllBytesAsync(tempOut, bytes);
+
+                    dialog.Close();
+
+                    _rawScannedPath = tempOut;
+                    PushUndoState(tempOut);
+                    LoadImageToPreview(tempOut);
+                    txtStatus.Text = "Foto berhasil dibuat oleh AI Agent dan dimuat ke preview.";
+                }
+                catch (Exception ex)
+                {
+                    lblDialogStatus.Text = $"❌ Error: {ex.Message}";
+                    lblDialogStatus.Foreground = Avalonia.Media.Brushes.Red;
+                }
+                finally
+                {
+                    btnGen.IsEnabled = true;
+                }
+            };
+
+            buttonBar.Children.Add(btnCancel);
+            buttonBar.Children.Add(btnGen);
+
+            mainPanel.Children.Add(new TextBlock { Text = "Penyedia AI:", FontSize = 12, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+            mainPanel.Children.Add(cbProvider);
+            mainPanel.Children.Add(new TextBlock { Text = "API Key:", FontSize = 12, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+            mainPanel.Children.Add(txtApiKey);
+            mainPanel.Children.Add(new TextBlock { Text = "Prompt Gambar:", FontSize = 12, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+            mainPanel.Children.Add(txtPrompt);
+            mainPanel.Children.Add(lblDialogStatus);
+            mainPanel.Children.Add(buttonBar);
+
+            rootBorder.Child = mainPanel;
+            dialog.Content = rootBorder;
+
+            await dialog.ShowDialog(this);
+        }
+
+        private async void btnUploadImage_Click(object? sender, RoutedEventArgs e)
+        {
+            OnBrowseLocalImageClick(sender, e);
         }
 
         private void LoadImageToPreview(string filePath)
@@ -368,7 +526,7 @@ namespace Fotocopy.Desktop
             }
         }
 
-        private async void btnChangeBg_Click(object? sender, RoutedEventArgs e)
+        private async void OnChangeBgColorClick(object? sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath))
             {
@@ -376,7 +534,6 @@ namespace Fotocopy.Desktop
                 return;
             }
 
-            // Tampilkan Dialog Pemilih Warna (Color Picker Dialog)
             var chosenColor = await ShowColorPickerDialogAsync();
             if (chosenColor == null)
             {
@@ -414,7 +571,7 @@ namespace Fotocopy.Desktop
                     };
 
                     using var proc = Process.Start(psi);
-                    proc?.WaitForExit(45000);
+                    proc?.WaitForExit(60000);
                 });
 
                 if (File.Exists(outPath))
@@ -425,6 +582,82 @@ namespace Fotocopy.Desktop
                 else
                 {
                     txtStatus.Text = "AI background replacement selesai diproses.";
+                }
+            }
+            catch (Exception ex)
+            {
+                txtStatus.Text = $"AI Error: {ex.Message}";
+            }
+            finally
+            {
+                btnChangeBg.IsEnabled = true;
+            }
+        }
+
+        private async void OnChangeBgImageClick(object? sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath))
+            {
+                txtStatus.Text = "Pilih atau scan dokumen terlebih dahulu sebelum mengganti background.";
+                return;
+            }
+
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Pilih Gambar Background Baru",
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("Gambar")
+                    {
+                        Patterns = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.webp" }
+                    },
+                    FilePickerFileTypes.All
+                }
+            });
+
+            if (files.Count == 0) return;
+
+            string bgImagePath = files[0].Path.LocalPath;
+            if (!File.Exists(bgImagePath)) return;
+
+            txtStatus.Text = $"Sedang memproses AI ganti background dengan gambar {Path.GetFileName(bgImagePath)}...";
+            btnChangeBg.IsEnabled = false;
+
+            string outPath = Path.Combine(Path.GetTempPath(), $"bg_{Guid.NewGuid():N}.png");
+            string scriptPath = Path.Combine(AppContext.BaseDirectory, "change_bg.py");
+            if (!File.Exists(scriptPath))
+            {
+                scriptPath = @"c:\lara\www\Fotocopy\change_bg.py";
+            }
+
+            try
+            {
+                PushUndoState(_currentImagePath);
+
+                await Task.Run(() =>
+                {
+                    string pythonCmd = OperatingSystem.IsWindows() ? "python" : "python3";
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = pythonCmd,
+                        Arguments = $"\"{scriptPath}\" --bg-image \"{bgImagePath}\" \"{_currentImagePath}\" \"{outPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using var proc = Process.Start(psi);
+                    proc?.WaitForExit(60000);
+                });
+
+                if (File.Exists(outPath))
+                {
+                    LoadImageToPreview(outPath);
+                    txtStatus.Text = $"Background berhasil diganti dengan gambar {Path.GetFileName(bgImagePath)}.";
+                }
+                else
+                {
+                    txtStatus.Text = "AI background replacement gagal menghasilkan gambar.";
                 }
             }
             catch (Exception ex)

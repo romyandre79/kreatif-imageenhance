@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\AiAgentService.cs" Link="AiAgentService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\change_bg.py" Link="change_bg.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

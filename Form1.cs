@@ -622,6 +622,57 @@ namespace Fotocopy
 
         private void btnUploadImage_Click(object sender, EventArgs e)
         {
+            var menu = new ContextMenuStrip();
+            var itemBrowse = new ToolStripMenuItem("📁 Pilih File Gambar dari Komputer (JPG/PNG/BMP)...");
+            var itemAi = new ToolStripMenuItem("✨ Generate Foto dengan AI (Gemini, OpenAI, Pollinations)...");
+
+            menu.Items.Add(itemBrowse);
+            menu.Items.Add(itemAi);
+
+            itemBrowse.Click += (s, ev) =>
+            {
+                BrowseImageFile();
+            };
+
+            itemAi.Click += (s, ev) =>
+            {
+                OpenAiPromptDialog();
+            };
+
+            menu.Show(btnUploadImage, new Point(0, btnUploadImage.Height));
+        }
+
+        private void OpenAiPromptDialog()
+        {
+            try
+            {
+                using (var dlg = new AiPromptDialog())
+                {
+                    if (dlg.ShowDialog(this) == DialogResult.OK && dlg.GeneratedImage != null)
+                    {
+                        PushUndoState(_enhancedImage ?? _rawScannedImage);
+
+                        _rawScannedImage?.Dispose();
+                        _rawScannedImage = new Bitmap(dlg.GeneratedImage);
+
+                        numScale.Value = 100;
+                        chkFitPage.Checked = false;
+                        ClearUndoRedo();
+                        ReprocessScannedImage();
+
+                        btnResetCrop.Enabled = true;
+                        UpdateStatus($"Foto berhasil dibuat oleh AI Agent ({_rawScannedImage.Width} x {_rawScannedImage.Height} px) dan dimuat ke preview.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Gagal memproses gambar AI: {ex.Message}", "Error AI", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BrowseImageFile()
+        {
             try
             {
                 using (OpenFileDialog ofd = new OpenFileDialog())
@@ -632,7 +683,6 @@ namespace Fotocopy
 
                     if (ofd.ShowDialog() == DialogResult.OK)
                     {
-                        // Muat gambar ke memory stream agar file tidak terkunci oleh Windows
                         byte[] fileBytes = System.IO.File.ReadAllBytes(ofd.FileName);
                         using (var ms = new System.IO.MemoryStream(fileBytes))
                         {
@@ -641,7 +691,6 @@ namespace Fotocopy
                             _rawScannedImage = new Bitmap(uploaded);
                         }
 
-                        // Reset skala ke 100% dan matikan fit page agar ukuran gambar apa adanya (WYSIWYG)
                         numScale.Value = 100;
                         chkFitPage.Checked = false;
 
@@ -664,7 +713,7 @@ namespace Fotocopy
             }
         }
 
-        private async void btnChangeBg_Click(object sender, EventArgs e)
+        private void btnChangeBg_Click(object sender, EventArgs e)
         {
             Image activeImage = _enhancedImage ?? _rawScannedImage;
             if (activeImage == null)
@@ -673,61 +722,129 @@ namespace Fotocopy
                 return;
             }
 
-            colorDialogBg.FullOpen = true;
-            colorDialogBg.Color = Color.White;
+            // Tampilkan menu pilihan: Ganti Warna Solid atau Ganti dengan Gambar Lain
+            var contextMenu = new ContextMenuStrip();
+            var itemColor = new ToolStripMenuItem("🎨 Ganti Warna Polos (Pasfoto / Solid)...");
+            var itemImage = new ToolStripMenuItem("🖼️ Ganti dengan Gambar / Wallpaper Lain...");
 
-            if (colorDialogBg.ShowDialog() == DialogResult.OK)
+            contextMenu.Items.Add(itemColor);
+            contextMenu.Items.Add(itemImage);
+
+            itemColor.Click += async (s, ev) =>
             {
-                Color chosen = colorDialogBg.Color;
-                PushUndoState(activeImage);
+                colorDialogBg.FullOpen = true;
+                colorDialogBg.Color = Color.White;
 
-                // Buat salinan image untuk diproses di thread terpisah agar thread-safe
-                Bitmap inputCopy = new Bitmap(activeImage);
-
-                // Indikator loading agar UI tidak hang/Not Responding
-                btnChangeBg.Enabled = false;
-                Cursor = Cursors.WaitCursor;
-                UpdateStatus("Sedang memproses AI ganti background (mohon tunggu)...");
-
-                try
+                if (colorDialogBg.ShowDialog() == DialogResult.OK)
                 {
-                    Bitmap recolored = await Task.Run(() =>
+                    Color chosen = colorDialogBg.Color;
+                    PushUndoState(activeImage);
+
+                    Bitmap inputCopy = new Bitmap(activeImage);
+                    btnChangeBg.Enabled = false;
+                    Cursor = Cursors.WaitCursor;
+                    UpdateStatus("Sedang memproses AI ganti warna background (mohon tunggu)...");
+
+                    try
                     {
+                        Bitmap recolored = await Task.Run(() =>
+                        {
+                            try
+                            {
+                                return ImageEnhanceService.ReplaceBackgroundColor(inputCopy, chosen);
+                            }
+                            finally
+                            {
+                                inputCopy.Dispose();
+                            }
+                        });
+
+                        if (recolored != null)
+                        {
+                            _enhancedImage?.Dispose();
+                            _enhancedImage = recolored;
+
+                            UpdatePreviewDisplay();
+                            btnResetCrop.Enabled = true;
+                            UpdateStatus($"Warna background berhasil diubah menjadi RGB({chosen.R}, {chosen.G}, {chosen.B}).");
+                        }
+                        else
+                        {
+                            UpdateStatus("AI background replacement tidak menghasilkan gambar atau dibatalkan.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Gagal mengganti warna background: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        UpdateStatus("Gagal mengganti background.");
+                    }
+                    finally
+                    {
+                        btnChangeBg.Enabled = true;
+                        Cursor = Cursors.Default;
+                    }
+                }
+            };
+
+            itemImage.Click += async (s, ev) =>
+            {
+                using (OpenFileDialog ofd = new OpenFileDialog())
+                {
+                    ofd.Title = "Pilih Gambar Background Baru";
+                    ofd.Filter = "Image Files (*.jpg;*.jpeg;*.png;*.bmp;*.webp)|*.jpg;*.jpeg;*.png;*.bmp;*.webp|All Files (*.*)|*.*";
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        string bgPath = ofd.FileName;
+                        PushUndoState(activeImage);
+
+                        Bitmap inputCopy = new Bitmap(activeImage);
+                        btnChangeBg.Enabled = false;
+                        Cursor = Cursors.WaitCursor;
+                        UpdateStatus("Sedang memproses AI ganti background dengan gambar (mohon tunggu)...");
+
                         try
                         {
-                            return ImageEnhanceService.ReplaceBackgroundColor(inputCopy, chosen);
+                            Bitmap resultImg = await Task.Run(() =>
+                            {
+                                try
+                                {
+                                    return ImageEnhanceService.ReplaceBackgroundImage(inputCopy, bgPath);
+                                }
+                                finally
+                                {
+                                    inputCopy.Dispose();
+                                }
+                            });
+
+                            if (resultImg != null)
+                            {
+                                _enhancedImage?.Dispose();
+                                _enhancedImage = resultImg;
+
+                                UpdatePreviewDisplay();
+                                btnResetCrop.Enabled = true;
+                                UpdateStatus($"Background berhasil diganti dengan gambar: {System.IO.Path.GetFileName(bgPath)}");
+                            }
+                            else
+                            {
+                                UpdateStatus("AI background replacement tidak menghasilkan gambar.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Gagal mengganti background dengan gambar: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            UpdateStatus("Gagal mengganti background.");
                         }
                         finally
                         {
-                            inputCopy.Dispose();
+                            btnChangeBg.Enabled = true;
+                            Cursor = Cursors.Default;
                         }
-                    });
-
-                    if (recolored != null)
-                    {
-                        _enhancedImage?.Dispose();
-                        _enhancedImage = recolored;
-
-                        UpdatePreviewDisplay();
-                        btnResetCrop.Enabled = true;
-                        UpdateStatus($"Warna background berhasil diubah menjadi RGB({chosen.R}, {chosen.G}, {chosen.B}).");
-                    }
-                    else
-                    {
-                        UpdateStatus("AI background replacement tidak menghasilkan gambar atau dibatalkan.");
                     }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Gagal mengganti warna background: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    UpdateStatus("Gagal mengganti background.");
-                }
-                finally
-                {
-                    btnChangeBg.Enabled = true;
-                    Cursor = Cursors.Default;
-                }
-            }
+            };
+
+            contextMenu.Show(btnChangeBg, new Point(0, btnChangeBg.Height));
         }
 
         private void btnUndo_Click(object sender, EventArgs e)

@@ -460,6 +460,101 @@ namespace Fotocopy
             return null;
         }
 
+        public static Bitmap ReplaceBackgroundImage(Image source, string bgImagePath)
+        {
+            if (source == null || string.IsNullOrEmpty(bgImagePath) || !System.IO.File.Exists(bgImagePath)) return null;
+
+            string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "fotocopy_ai");
+            if (!System.IO.Directory.Exists(tempDir))
+            {
+                System.IO.Directory.CreateDirectory(tempDir);
+            }
+
+            string inputPath = System.IO.Path.Combine(tempDir, $"in_{Guid.NewGuid():N}.png");
+            string outputPath = System.IO.Path.Combine(tempDir, $"out_{Guid.NewGuid():N}.png");
+
+            try
+            {
+                source.Save(inputPath, ImageFormat.Png);
+
+                string scriptPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "change_bg.py");
+                if (!System.IO.File.Exists(scriptPath))
+                {
+                    scriptPath = @"c:\lara\www\Fotocopy\change_bg.py";
+                }
+
+                if (!System.IO.File.Exists(scriptPath)) return null;
+
+                string pythonExe = @"C:\lara\bin\python\python-3.13\python.exe";
+                if (!System.IO.File.Exists(pythonExe))
+                {
+                    string[] potentialPythonPaths = new string[]
+                    {
+                        @"C:\lara\bin\python\python-3.13\python.exe",
+                        @"python.exe",
+                        @"python3",
+                        @"/usr/bin/python3"
+                    };
+
+                    foreach (var p in potentialPythonPaths)
+                    {
+                        if (System.IO.File.Exists(p) || p == "python.exe" || p == "python3")
+                        {
+                            pythonExe = p;
+                            break;
+                        }
+                    }
+                }
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = pythonExe,
+                    Arguments = $"\"{scriptPath}\" --bg-image \"{bgImagePath}\" \"{inputPath}\" \"{outputPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using (var process = System.Diagnostics.Process.Start(psi))
+                {
+                    bool finished = process.WaitForExit(60000);
+                    if (!finished)
+                    {
+                        try { process.Kill(); } catch { }
+                        return null;
+                    }
+
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    string stderr = process.StandardError.ReadToEnd();
+
+                    if (System.IO.File.Exists(outputPath))
+                    {
+                        byte[] resultBytes = System.IO.File.ReadAllBytes(outputPath);
+                        using (var ms = new System.IO.MemoryStream(resultBytes))
+                        {
+                            return new Bitmap(ms);
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"AI process output: {stdout}; Error: {stderr}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AI Background Error: {ex.Message}");
+            }
+            finally
+            {
+                try { if (System.IO.File.Exists(inputPath)) System.IO.File.Delete(inputPath); } catch { }
+                try { if (System.IO.File.Exists(outputPath)) System.IO.File.Delete(outputPath); } catch { }
+            }
+
+            return null;
+        }
+
         public static Bitmap CropByRectangle(Image source, Rectangle cropArea)
         {
             if (source == null) return null;
