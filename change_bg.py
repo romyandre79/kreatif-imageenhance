@@ -101,22 +101,21 @@ def crop_preset(input_path, output_path, preset_name, dpi=300):
         target_aspect = target_w / target_h
         src_aspect = img.width / img.height
 
+        # Fit preserving entire image (no auto crop)
         if src_aspect > target_aspect:
-            crop_w = int(round(img.height * target_aspect))
-            crop_x = (img.width - crop_w) // 2
-            crop_y = 0
-            crop_h = img.height
+            dest_w = target_w
+            dest_h = max(1, int(round(target_w / src_aspect)))
         else:
-            crop_h = int(round(img.width / target_aspect))
-            crop_x = 0
-            crop_w = img.width
-            crop_y = max(0, int((img.height - crop_h) * 0.25))
-            if crop_y + crop_h > img.height:
-                crop_y = img.height - crop_h
+            dest_h = target_h
+            dest_w = max(1, int(round(target_h * src_aspect)))
 
-        cropped = img.crop((crop_x, crop_y, crop_x + crop_w, crop_y + crop_h))
-        resized = cropped.resize((target_w, target_h), Image.Resampling.LANCZOS)
-        resized.save(output_path, "PNG", dpi=(dpi, dpi))
+        dest_x = (target_w - dest_w) // 2
+        dest_y = (target_h - dest_h) // 2
+
+        resized = img.resize((dest_w, dest_h), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGB", (target_w, target_h), (255, 255, 255))
+        canvas.paste(resized, (dest_x, dest_y))
+        canvas.save(output_path, "PNG", dpi=(dpi, dpi))
         print("SUCCESS")
     except Exception as e:
         print(f"ERROR: {str(e)}")

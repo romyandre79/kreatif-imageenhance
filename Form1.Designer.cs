@@ -392,11 +392,17 @@ namespace Fotocopy
             this.cbPaperSize.FormattingEnabled = true;
             this.cbPaperSize.Items.AddRange(new object[] {
             "A4 (210 x 297 mm)",
+            "A4 Landscape (297 x 210 mm)",
             "F4 / Folio (215 x 330 mm)",
+            "F4 / Folio Landscape (330 x 215 mm)",
             "Letter (215 x 279 mm)",
+            "Letter Landscape (279 x 215 mm)",
             "Legal (215 x 356 mm)",
+            "Legal Landscape (356 x 215 mm)",
             "A3 (297 x 420 mm)",
-            "A5 (148 x 210 mm)"});
+            "A3 Landscape (420 x 297 mm)",
+            "A5 (148 x 210 mm)",
+            "A5 Landscape (210 x 148 mm)"});
             this.cbPaperSize.Location = new System.Drawing.Point(135, 391);
             this.cbPaperSize.Name = "cbPaperSize";
             this.cbPaperSize.Size = new System.Drawing.Size(193, 28);

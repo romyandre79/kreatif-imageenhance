@@ -159,13 +159,16 @@ namespace Fotocopy
                 // -d <printer>
                 // -n <copies>
                 // -o media=<paperSize>
+                // -o orientation-requested=4 (Landscape)
                 // -o fit-to-page
                 string mediaOption = MapPaperSizeToCupsMedia(paperSizeName);
+                bool isLandscape = paperSizeName != null && paperSizeName.IndexOf("Landscape", StringComparison.OrdinalIgnoreCase) >= 0;
+                string orientOption = isLandscape ? "-o orientation-requested=4" : "";
                 string fitOption = fitToPage ? "-o fit-to-page" : "";
                 string copiesOption = copies > 1 ? $"-n {copies}" : "";
                 string destOption = !string.IsNullOrEmpty(printerName) ? $"-d \"{printerName}\"" : "";
 
-                string args = $"{destOption} {copiesOption} -o media={mediaOption} {fitOption} \"{tempFile}\"";
+                string args = $"{destOption} {copiesOption} -o media={mediaOption} {orientOption} {fitOption} \"{tempFile}\"";
 
                 var psi = new ProcessStartInfo
                 {

@@ -222,7 +222,11 @@ namespace Fotocopy
 
             for (int i = 0; i < cbPaperSize.Items.Count; i++)
             {
-                if (cbPaperSize.Items[i].ToString().StartsWith(paperName, StringComparison.OrdinalIgnoreCase))
+                string itemText = cbPaperSize.Items[i].ToString();
+                if (string.Equals(itemText, paperName, StringComparison.OrdinalIgnoreCase) ||
+                    itemText.StartsWith(paperName + " ", StringComparison.OrdinalIgnoreCase) ||
+                    itemText.StartsWith(paperName + "(", StringComparison.OrdinalIgnoreCase) ||
+                    itemText.StartsWith(paperName, StringComparison.OrdinalIgnoreCase))
                 {
                     cbPaperSize.SelectedIndex = i;
                     return;
@@ -234,12 +238,16 @@ namespace Fotocopy
         private string GetSelectedPaperSizeName()
         {
             string selected = cbPaperSize.SelectedItem?.ToString() ?? "A4";
-            if (selected.StartsWith("F4", StringComparison.OrdinalIgnoreCase) || selected.StartsWith("Folio", StringComparison.OrdinalIgnoreCase)) return "F4";
-            if (selected.StartsWith("Letter", StringComparison.OrdinalIgnoreCase)) return "Letter";
-            if (selected.StartsWith("Legal", StringComparison.OrdinalIgnoreCase)) return "Legal";
-            if (selected.StartsWith("A3", StringComparison.OrdinalIgnoreCase)) return "A3";
-            if (selected.StartsWith("A5", StringComparison.OrdinalIgnoreCase)) return "A5";
-            return "A4";
+            bool isLandscape = selected.IndexOf("Landscape", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            string baseName = "A4";
+            if (selected.StartsWith("F4", StringComparison.OrdinalIgnoreCase) || selected.StartsWith("Folio", StringComparison.OrdinalIgnoreCase)) baseName = "F4";
+            else if (selected.StartsWith("Letter", StringComparison.OrdinalIgnoreCase)) baseName = "Letter";
+            else if (selected.StartsWith("Legal", StringComparison.OrdinalIgnoreCase)) baseName = "Legal";
+            else if (selected.StartsWith("A3", StringComparison.OrdinalIgnoreCase)) baseName = "A3";
+            else if (selected.StartsWith("A5", StringComparison.OrdinalIgnoreCase)) baseName = "A5";
+
+            return isLandscape ? $"{baseName} Landscape" : baseName;
         }
 
         private int GetCurrentItemsPerSheet()
@@ -1034,8 +1042,13 @@ namespace Fotocopy
             Image activeImage = _enhancedImage ?? _rawScannedImage;
             if (activeImage == null || e.Button != MouseButtons.Left) return;
 
-            // Hanya aktifkan seleksi bebas jika mode 1 gambar aktif (bukan kompilasi lembaran multi-copy)
-            if (GetCurrentItemsPerSheet() > 1) return;
+            // Jika sedang dalam tampilan multi-copy (> 1 gambar per lembar), 
+            // kembalikan sementara ke mode 1 gambar agar pengguna bisa leluasa menyeleksi / crop objek aslinya
+            if (GetCurrentItemsPerSheet() > 1)
+            {
+                numItemsPerSheet.Value = 1;
+                UpdateStatus("Mode multi-copy dialihkan ke 1 gambar agar Anda dapat menyeleksi / memotong objek dengan presisi.");
+            }
 
             _isSelecting = true;
             _selectionStart = e.Location;

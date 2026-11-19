@@ -173,7 +173,13 @@ namespace Fotocopy
         public static Size GetPaperDimensions(string paperSizeName, int dpi = 300)
         {
             float wMm, hMm;
-            switch ((paperSizeName ?? "A4").ToUpperInvariant())
+            string key = (paperSizeName ?? "A4").ToUpperInvariant();
+            bool isLandscape = key.Contains("LANDSCAPE");
+
+            // Bersihkan suffix orientasi untuk deteksi tipe kertas dasar
+            key = key.Replace("(LANDSCAPE)", "").Replace("LANDSCAPE", "").Trim();
+
+            switch (key)
             {
                 case "F4":
                 case "FOLIO":
@@ -189,6 +195,13 @@ namespace Fotocopy
                 case "A4":
                 default:
                     wMm = 210f; hMm = 297f; break;
+            }
+
+            if (isLandscape)
+            {
+                float temp = wMm;
+                wMm = hMm;
+                hMm = temp;
             }
 
             int wPx = (int)Math.Round((wMm / 25.4f) * dpi);
@@ -361,6 +374,19 @@ namespace Fotocopy
                     // Mengalir ke samping sebanyak mungkin hingga tidak muat lebar kertas (flow horizontally first)
                     int maxColsPossible = Math.Max(1, (printableW + gapX) / (itemW + gapX));
                     cols = Math.Min(countPerSheet, maxColsPossible);
+
+                    // Jika jumlah objek sedikit (<= 4, misal 3 KTP) dan user ingin sejajar 1 baris ke samping,
+                    // bila sedikit melebihi batas printableW (karena margin default), sesuaikan agar tetap 1 baris
+                    if (cols < countPerSheet && countPerSheet <= 4)
+                    {
+                        int neededTotalW = (countPerSheet * itemW) + ((countPerSheet - 1) * gapX);
+                        // Jika total lebar 3 item masih muat dalam targetWidth fisik kertas
+                        if (neededTotalW <= targetWidth)
+                        {
+                            cols = countPerSheet;
+                        }
+                    }
+
                     rows = (int)Math.Ceiling((double)countPerSheet / cols);
                 }
                 else
@@ -457,10 +483,15 @@ namespace Fotocopy
 
                     pd.PrinterSettings.Copies = copies > 0 ? copies : (short)1;
 
+                    bool isLandscape = paperSizeName != null && paperSizeName.IndexOf("Landscape", StringComparison.OrdinalIgnoreCase) >= 0;
+                    pd.DefaultPageSettings.Landscape = isLandscape;
+
+                    string basePaper = (paperSizeName ?? "A4").Replace("Landscape", "").Replace("(", "").Replace(")", "").Trim();
+
                     // Cocokkan ukuran kertas printer driver jika tersedia
                     foreach (PaperSize ps in pd.PrinterSettings.PaperSizes)
                     {
-                        if (ps.PaperName.IndexOf(paperSizeName, StringComparison.OrdinalIgnoreCase) >= 0)
+                        if (ps.PaperName.IndexOf(basePaper, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             pd.DefaultPageSettings.PaperSize = ps;
                             break;

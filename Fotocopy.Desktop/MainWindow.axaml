@@ -70,11 +70,17 @@
                                         <TextBlock Text="Ukuran Kertas" FontSize="11" Foreground="#64748B" />
                                         <ComboBox x:Name="cmbPaperSize" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnSettingChanged">
                                             <ComboBoxItem Content="A4" />
+                                            <ComboBoxItem Content="A4 Landscape" />
                                             <ComboBoxItem Content="F4 / Folio" />
+                                            <ComboBoxItem Content="F4 / Folio Landscape" />
                                             <ComboBoxItem Content="Legal" />
+                                            <ComboBoxItem Content="Legal Landscape" />
                                             <ComboBoxItem Content="Letter" />
+                                            <ComboBoxItem Content="Letter Landscape" />
                                             <ComboBoxItem Content="A3" />
+                                            <ComboBoxItem Content="A3 Landscape" />
                                             <ComboBoxItem Content="A5" />
+                                            <ComboBoxItem Content="A5 Landscape" />
                                         </ComboBox>
                                     </StackPanel>
 

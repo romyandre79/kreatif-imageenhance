@@ -615,8 +615,9 @@ namespace Fotocopy
         }
 
         /// <summary>
-        /// Memotong dan mengubah gambar objek sesuai ukuran preset (3x4, 4x6, 2R, 3R, 4R, dll)
-        /// dengan menjaga proporsi rasio aspek (crop tengah / center-crop) dan meresize pada resolusi target (default 300 DPI).
+        /// Menyesuaikan gambar objek ke ukuran preset (2x3, 3x4, 4x6, KTP, dll)
+        /// dengan prinsip FIT proporsional pas objek asli TANPA menyisakan ruang/padding putih berlebih di sekelilingnya,
+        /// sehingga jarak antar baris dan kolom murni ditentukan oleh pengaturan gap (mm).
         /// </summary>
         public static Bitmap CropToPresetSize(Image source, string presetName, int dpi = 300)
         {
@@ -645,38 +646,33 @@ namespace Fotocopy
             float targetAspect = (float)targetW / targetH;
             float srcAspect = (float)source.Width / source.Height;
 
-            int cropX = 0, cropY = 0, cropW = source.Width, cropH = source.Height;
-
+            // Hitung ukuran gambar yang di-FIT ke dalam targetW x targetH tanpa merusak aspek rasio
+            int destW, destH;
             if (srcAspect > targetAspect)
             {
-                // Sumber lebih lebar: potong kiri dan kanan secara seimbang
-                cropW = (int)Math.Round(source.Height * targetAspect);
-                cropX = (source.Width - cropW) / 2;
+                // Sumber lebih lebar dibanding target: batasi pada lebar preset
+                destW = targetW;
+                destH = Math.Max(1, (int)Math.Round(targetW / srcAspect));
             }
             else
             {
-                // Sumber lebih tinggi: potong atas dan bawah (sedikit bias ke atas untuk pas foto wajah)
-                cropH = (int)Math.Round(source.Width / targetAspect);
-                // Untuk pas foto manusia, kepala berada di bagian atas, beri margin 1/4 dari atas dan 3/4 dari bawah
-                cropY = Math.Max(0, (int)((source.Height - cropH) * 0.25f));
-                if (cropY + cropH > source.Height)
-                {
-                    cropY = source.Height - cropH;
-                }
+                // Sumber lebih tinggi dibanding target: batasi pada tinggi preset
+                destH = targetH;
+                destW = Math.Max(1, (int)Math.Round(targetH * srcAspect));
             }
 
-            Rectangle srcRect = new Rectangle(cropX, cropY, cropW, cropH);
-
-            Bitmap result = new Bitmap(targetW, targetH);
+            // Buat bitmap pas seukuran destW x destH tanpa padding putih kosong ekstra di atas/bawah/kiri/kanan
+            Bitmap result = new Bitmap(destW, destH);
             result.SetResolution(dpi, dpi);
 
             using (Graphics g = Graphics.FromImage(result))
             {
+                g.Clear(Color.White);
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.SmoothingMode = SmoothingMode.HighQuality;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.CompositingQuality = CompositingQuality.HighQuality;
-                g.DrawImage(source, new Rectangle(0, 0, targetW, targetH), srcRect, GraphicsUnit.Pixel);
+                g.DrawImage(source, new Rectangle(0, 0, destW, destH));
             }
 
             return result;
